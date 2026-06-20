@@ -9,6 +9,7 @@ from __future__ import annotations
 import subprocess
 
 from tools import DEMO_MODE, IS_MACOS
+from tools.execution_lock import require_consent
 
 
 def _demo() -> bool:
@@ -26,6 +27,7 @@ def _osascript(script: str) -> str:
 
 def send_imessage(recipient: str, body: str) -> bool:
     """Send an iMessage. Returns True on success."""
+    require_consent("comms.imessage")
     if _demo():
         print(f"[DEMO] iMessage -> {recipient}: {body!r}")
         return True
@@ -44,6 +46,7 @@ def send_imessage(recipient: str, body: str) -> bool:
 
 def make_call(recipient: str) -> bool:
     """Start a phone/FaceTime call. Returns True on success."""
+    require_consent("comms.call")
     if _demo():
         print(f"[DEMO] Calling {recipient}...")
         return True

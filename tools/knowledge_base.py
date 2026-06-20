@@ -10,6 +10,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from schemas.agent5 import KnowledgeBaseResult
+from tools.execution_lock import require_consent
 
 
 def _base_dir() -> Path:
@@ -27,6 +28,7 @@ def _path(file_name: str) -> Path:
 
 def create_new_file(file_name: str, file_content: str) -> KnowledgeBaseResult:
     """Create a new knowledge file. Fails if it already exists."""
+    require_consent("knowledge.create")
     path = _path(file_name)
     if path.exists():
         return KnowledgeBaseResult(
@@ -49,6 +51,7 @@ def read_file(file_name: str) -> KnowledgeBaseResult:
 
 def update_file(file_name: str, file_content: str) -> KnowledgeBaseResult:
     """Overwrite a knowledge file's contents (creating it if needed)."""
+    require_consent("knowledge.update")
     path = _path(file_name)
     existed = path.exists()
     path.write_text(file_content, encoding="utf-8")
@@ -58,6 +61,7 @@ def update_file(file_name: str, file_content: str) -> KnowledgeBaseResult:
 
 def add_context(file_name: str, context: str) -> KnowledgeBaseResult:
     """Append a line of context to an existing (or new) knowledge file."""
+    require_consent("knowledge.add_context")
     path = _path(file_name)
     prior = path.read_text(encoding="utf-8") if path.exists() else ""
     updated = f"{prior.rstrip()}\n{context}\n" if prior else f"{context}\n"

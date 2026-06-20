@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from schemas.agent1 import NotificationEmailRequest
 from tools import DEMO_MODE
+from tools.execution_lock import require_consent
 
 
 def _simulate(kind: str, recipient: str, subject: str) -> str:
@@ -23,6 +24,7 @@ def send_user_email(
     from_address: str = "Desir <onboarding@resend.dev>",
 ) -> str:
     """Send a plain-text email. Returns ``"ok"`` or an error message string."""
+    require_consent("email.send")
     if DEMO_MODE or not api_key:
         return _simulate("user", recipient, subject)
 
@@ -60,6 +62,7 @@ def _render_notification_html(n: NotificationEmailRequest) -> str:
 
 def send_notification_email(n: NotificationEmailRequest) -> str:
     """Send a styled HTML notification. Returns ``"ok"`` or an error string."""
+    require_consent("email.notification")
     if DEMO_MODE or not n.api_key:
         return _simulate("notification", n.recipient, n.subject)
 
@@ -86,6 +89,7 @@ def add_domain(domain_name: str):
 
     Raises on failure so the agent can report the reason.
     """
+    require_consent("email.register_domain")
     if DEMO_MODE:
         return {
             "id": "demo-domain-id",

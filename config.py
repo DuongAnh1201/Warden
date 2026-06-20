@@ -66,5 +66,9 @@ class Settings():
     """Optional Redis connection URL (e.g. redis://localhost:6379).
     When set, the consent ledger uses Redis Streams; otherwise FileLedger (JSONL)."""
 
+    consent_secret: str = os.getenv("CONSENT_SECRET", "moneypenny-dev-consent-secret-change-me")
+    """Server-side secret used to mint Consent_Tokens (HMAC-SHA256).
+    MUST be overridden in production; the default is for local/demo only."""
+
 # Singleton — import this everywhere instead of instantiating Settings() yourself.
 settings = Settings()
