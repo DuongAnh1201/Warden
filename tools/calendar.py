@@ -12,6 +12,7 @@ import uuid
 
 from schemas.agent2 import CalendarRequest
 from tools import DEMO_MODE, IS_MACOS
+from tools.execution_lock import require_consent
 
 
 def _demo() -> bool:
@@ -61,6 +62,7 @@ def calendars() -> str:
 
 def create_calendar_event(req: CalendarRequest) -> str:
     """Create an event. Returns a message including the new event id."""
+    require_consent("calendar.create")
     if not req.start or not req.end:
         raise RuntimeError("start and end times are required to create an event")
 
@@ -88,6 +90,7 @@ def create_calendar_event(req: CalendarRequest) -> str:
 
 def create_calendar_update(req: CalendarRequest) -> str:
     """Update an existing event identified by ``req.id``."""
+    require_consent("calendar.update")
     if _demo():
         return f"[DEMO] Updated event {req.id} ('{req.title}')."
 
@@ -118,6 +121,7 @@ def create_calendar_update(req: CalendarRequest) -> str:
 
 def create_calendar_delete(req: CalendarRequest) -> str:
     """Delete an event identified by ``req.id``."""
+    require_consent("calendar.delete")
     if _demo():
         return f"[DEMO] Deleted event {req.id}."
 

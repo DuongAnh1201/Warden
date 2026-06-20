@@ -106,3 +106,31 @@ This is the line MoneyPenny guards: a token is the *only* thing that turns inten
 real-world effect. How that token is obtained — a hard verbal "yes" vs. an auto-issued
 silent token with a registered rollback — is the subject of
 [`04-trust-tiers.md`](./04-trust-tiers.md).
+
+---
+
+## Implementation status (what is wired today)
+
+The token + execution lock from §3–§4 are implemented. The mechanism is adapted to the
+existing orchestrator while preserving the rule *no token, no effect*:
+
+| Spec concept | Implemented as |
+|---|---|
+| `ProposedAction` (the pause) | `ActionRequest` in `schemas/consent.py`, raised by every gated tool |
+| The single funnel | `gate()` in `ai/agents/consent.py` — records request → decision → outcome |
+| `Consent_Token` (HMAC of `ts \| action_id \| transcript`) | `ai/agents/consent_token.py` (`mint_consent_token`), minted on approval and appended to the ledger via `ActionDecision.consent_token` |
+| The execution lock in the wrapper | `tools/execution_lock.py` (`require_consent`), called at the top of every side-effecting tool (`send_user_email`, calendar create/update/delete, iMessage/call, knowledge create/update/add_context) |
+| TTL / expiry | `CONSENT_TTL_SECONDS = 300`; the active grant carries `expires_at` and `require_consent` rejects expired grants |
+| Default-deny on bypass | A tool invoked outside the gate has no active `ConsentGrant` → `require_consent` raises `ConsentError` and nothing fires |
+
+**Mechanism note.** Rather than threading a token argument through every tool, the gate
+opens a process-local `consent_scope` (a `contextvars.ContextVar`) carrying the grant; the
+grant propagates into worker threads via `asyncio.to_thread`. The grant is **single-use**
+and **scoped to one `action_type`**, so an approval for `calendar.create` cannot be reused
+to `email.send`. The HMAC `Consent_Token` is still minted and written to the ledger as the
+auditable proof of consent.
+
+**Not yet implemented (still aspirational here):** the explicit
+`PENDING_CONSENT → CONSENT_CONFIRMED` Redis status machine, static Trust Tiers
+([`04-trust-tiers.md`](./04-trust-tiers.md)), and the Phoenix bypass evaluator / kill
+switch ([`03-observability-and-ledger.md`](./03-observability-and-ledger.md)).

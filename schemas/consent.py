@@ -53,6 +53,10 @@ class ActionDecision(BaseModel):
     decision: Decision
     revision_note: str = ""
     """Populated when decision == 'revise'; guidance for the agent to re-draft."""
+    consent_token: str = ""
+    """The Consent_Token minted on approval (HMAC over ts|action_id|transcript).
+    Appended to the ledger as cryptographic proof, and required by the execution
+    lock before any side effect runs. Empty for cancel/revise."""
     decided_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
