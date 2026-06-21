@@ -259,7 +259,7 @@ frontend/dist/
 frontend/.vite/
 
 # uv
-uv.lock
+# uv.lock is intentionally tracked — Railway needs it for reproducible builds
 .gitnexus
 .codex
 /AGENTS.md

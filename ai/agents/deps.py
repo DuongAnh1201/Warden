@@ -7,7 +7,7 @@ from ai.prompts import load_prompt
 from tools.ledger import ConsentLedger, get_ledger
 from schemas.consent import ActionDecision, ActionRequest
 
-_TOM_HISTORY = load_prompt("tombio")
+_USER_HISTORY = load_prompt("tombio")
 
 
 @dataclass
@@ -18,9 +18,10 @@ class OrchestratorDeps:
 
     history_context: dict = field(default_factory=dict)
     preferred_pronouns: str = field(default="Sir")
-    name: str = field(default="Khoi")
-    email_address: str = field(default="khoiduong2913@gmail.com")
-    tom_history_context: str = field(default=_TOM_HISTORY)
+    name: str = field(default="")
+    email_address: str = field(default="")
+    user_history_context: str = field(default=_USER_HISTORY)
+    """Background bio for the current user, injected into the orchestrator system prompt."""
     search_api_key: str = field(default="")
     calendar_event_ids: dict = field(default_factory=dict)
 

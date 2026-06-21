@@ -20,7 +20,7 @@ def get_orchestrator() -> Agent:
             deps_type=OrchestratorDeps,
         )
 
-        # ── Dynamic context: inject Tom's biographical background ──────────────
+        # ── Dynamic context: inject user identity + bio at runtime ───────────────
 
         @_orchestrator.system_prompt
         async def inject_user_context(ctx: RunContext[OrchestratorDeps]) -> str:
@@ -29,8 +29,8 @@ def get_orchestrator() -> Agent:
                 parts.append(f"User's name: {ctx.deps.name} (address them as {ctx.deps.preferred_pronouns}).")
             if ctx.deps.email_address:
                 parts.append(f"User's email: {ctx.deps.email_address}.")
-            if ctx.deps.tom_history_context:
-                parts.append(f"## User Background\n{ctx.deps.tom_history_context}")
+            if ctx.deps.user_history_context:
+                parts.append(f"## User Background\n{ctx.deps.user_history_context}")
             return "\n".join(parts)
 
         # ── Sub-agent delegation tools ─────────────────────────────────────────
@@ -124,7 +124,6 @@ def get_orchestrator() -> Agent:
             return result.output.message
 
         @_orchestrator.tool
-        async def delegate_knowledge_base(ctx, request: str) -> str:
         async def delegate_knowledge_base(
             ctx: RunContext[OrchestratorDeps],
             request: str,

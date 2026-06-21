@@ -9,8 +9,6 @@ RUN uv sync --frozen --no-dev
 
 COPY . .
 
-# PORT is injected by Railway (and other PaaS platforms) at runtime.
-# The app reads it via config.fetch_agent_port — no need to hardcode here.
-EXPOSE 8001
-
+# Agentverse mailbox connects outbound — no inbound port needed.
+# FETCH_AGENT_PORT is only used when running with a public endpoint instead of mailbox.
 CMD ["uv", "run", "python", "-m", "ai.transport.fetch_wrapper"]
