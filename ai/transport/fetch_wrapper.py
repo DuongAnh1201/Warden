@@ -208,15 +208,27 @@ def _build_agent() -> Agent:
         print("─" * 60)
         print("  MoneyPenny (Fetch.ai uAgent)")
         print(f"  Address : {addr}")
-        print(f"  Mailbox : connecting to Agentverse...")
-        print()
-        print("  Next steps:")
-        print("  1. Open the agent inspector URL printed above and click 'Connect Mailbox'")
-        print("  2. Go to agentverse.ai -> Functions -> + New Function")
-        print(f"     Set agent address: {addr}")
-        print("  3. That makes MoneyPenny discoverable on ASI:One")
         print("─" * 60)
         print()
+
+        if settings.agentverse_api_key and settings.fetch_agent_endpoint:
+            try:
+                from uagents_core.utils.registration import (
+                    register_chat_agent,
+                    RegistrationRequestCredentials,
+                )
+                register_chat_agent(
+                    "MoneyPenny",
+                    settings.fetch_agent_endpoint,
+                    active=True,
+                    credentials=RegistrationRequestCredentials(
+                        agentverse_api_key=settings.agentverse_api_key,
+                        agent_seed_phrase=settings.fetch_agent_seed,
+                    ),
+                )
+                print("  [agentverse] Chat agent registered — discoverable on ASI:One")
+            except Exception as exc:
+                print(f"  [agentverse] Chat registration failed: {exc}")
 
     @agent.on_interval(period=2.0)
     async def flush_outbound(ctx: Context) -> None:
