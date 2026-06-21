@@ -231,23 +231,14 @@ def _build_agent() -> Agent:
             "Add a stable seed phrase to .env so MoneyPenny has a fixed Fetch.ai address."
         )
 
-    # On Railway (or any host with a public URL): register with that endpoint so the
-    # Agentverse inspector can reach the agent and create the mailbox.
-    # Locally (no public URL): fall back to outbound-only mailbox mode.
-    if settings.fetch_agent_endpoint:
-        agent = Agent(
-            name="moneypenny",
-            seed=settings.fetch_agent_seed,
-            port=settings.fetch_agent_port,
-            endpoint=[settings.fetch_agent_endpoint],
-        )
-    else:
-        agent = Agent(
-            name="moneypenny",
-            seed=settings.fetch_agent_seed,
-            port=settings.fetch_agent_port,
-            mailbox=True,
-        )
+    # Always use mailbox mode — Agentverse holds and delivers messages without
+    # requiring a publicly-reachable HTTP endpoint. Endpoint mode triggers a
+    # challenge-response verification that can fail on Railway due to timing.
+    agent = Agent(
+        name="moneypenny",
+        seed=settings.fetch_agent_seed,
+        mailbox=True,
+    )
 
     @agent.on_event("startup")
     async def on_startup(ctx: Context) -> None:
@@ -259,20 +250,28 @@ def _build_agent() -> Agent:
         print("─" * 60)
         print()
 
-        if settings.agentverse_api_key and settings.fetch_agent_endpoint:
+        # Register on Agentverse so the agent appears as a chat agent on ASI:One.
+        # Run in a thread so it doesn't block the event loop during startup.
+        if settings.agentverse_api_key:
+            import asyncio as _asyncio
             try:
                 from uagents_core.utils.registration import (
                     register_chat_agent,
                     RegistrationRequestCredentials,
                 )
-                register_chat_agent(
+                # Use the public endpoint if available, otherwise the mailbox URL.
+                endpoint = settings.fetch_agent_endpoint or f"https://agentverse.ai/v1/agents/{addr}/messages"
+                await _asyncio.to_thread(
+                    register_chat_agent,
                     "MoneyPenny",
-                    settings.fetch_agent_endpoint,
-                    active=True,
-                    credentials=RegistrationRequestCredentials(
+                    endpoint,
+                    True,
+                    RegistrationRequestCredentials(
                         agentverse_api_key=settings.agentverse_api_key,
                         agent_seed_phrase=settings.fetch_agent_seed,
                     ),
+                    False,  # track_interactions
+                    "AI personal assistant — email, search, Drive, Gmail, and Agentverse agent messaging.",
                 )
                 print("  [agentverse] Chat agent registered — discoverable on ASI:One")
             except Exception as exc:
