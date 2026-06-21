@@ -25,7 +25,7 @@ from tools.ledger import get_ledger
 logger = logging.getLogger(__name__)
 
 HOST = os.getenv("SERVER_HOST", "0.0.0.0")
-PORT = int(os.getenv("SERVER_PORT", "8765"))
+PORT = int(os.getenv("PORT", os.getenv("SERVER_PORT", "8765")))
 
 
 def create_app() -> FastAPI:

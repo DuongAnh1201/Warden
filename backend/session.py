@@ -12,6 +12,7 @@ from ai.agents.orchestrator import get_orchestrator
 from ai.session.deps_factory import build_orchestrator_deps
 from backend.approval import WebSocketApprover
 from backend.protocol import serialize_ledger_entry
+from backend.voice_pipeline import VoicePipeline
 from observability.kill_switch import SessionFrozenError, assert_session_active
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ class AgentSession:
         self._user_id = "default"
         self._deps = None
         self._started = False
+        self._voice: VoicePipeline | None = None
 
     async def send_json(self, payload: dict[str, Any]) -> None:
         await self._ws.send_text(json.dumps(payload))
@@ -47,6 +49,8 @@ class AgentSession:
             logger.info("client disconnected user_id=%s", self._user_id)
         finally:
             self._approver.cancel_all()
+            if self._voice:
+                await self._voice.stop()
 
     async def handle_message(self, message: dict[str, Any]) -> None:
         msg_type = message.get("type")
@@ -89,13 +93,15 @@ class AgentSession:
             return
 
         if msg_type == "audio":
-            if message.get("final"):
-                await self.send_json(
-                    {
-                        "type": "error",
-                        "message": "Voice input arrives in Phase 3. Send a text message for now.",
-                    }
-                )
+            data = str(message.get("data") or "")
+            if data:
+                if self._voice is None:
+                    self._voice = VoicePipeline(
+                        on_transcript=self._handle_voice_transcript,
+                        on_audio_chunk=self._send_audio_chunk,
+                    )
+                    await self._voice.start()
+                await self._voice.send_audio(data)
             return
 
         if msg_type == "approval_decision":
@@ -111,7 +117,14 @@ class AgentSession:
 
         logger.debug("ignored message type=%s", msg_type)
 
-    async def run_prompt(self, prompt: str) -> None:
+    async def _handle_voice_transcript(self, transcript: str) -> None:
+        await self.send_json({"type": "transcript", "role": "user", "text": transcript})
+        await self.run_prompt(transcript, tts=True)
+
+    async def _send_audio_chunk(self, base64_data: str) -> None:
+        await self.send_json({"type": "audio", "data": base64_data})
+
+    async def run_prompt(self, prompt: str, *, tts: bool = False) -> None:
         async with self._run_lock:
             try:
                 assert_session_active()
@@ -127,6 +140,8 @@ class AgentSession:
                 result = await get_orchestrator().run(prompt, deps=self._deps)
                 response = result.output.response
                 await self.send_json({"type": "transcript", "role": "assistant", "text": response})
+                if tts and self._voice:
+                    await self._voice.speak(response)
                 await self.send_json({"type": "completed", "message": "Ready for your next instruction."})
             except SessionFrozenError as exc:
                 await self.send_json({"type": "error", "message": str(exc)})
