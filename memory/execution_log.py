@@ -29,7 +29,13 @@ import redis as _redis
 
 class ExecutionLog:
     def __init__(self, redis_url: str) -> None:
-        self._r = _redis.from_url(redis_url, decode_responses=True)
+        self._r = _redis.from_url(
+            redis_url,
+            decode_responses=True,
+            socket_connect_timeout=10,
+            socket_timeout=15,
+            retry_on_timeout=True,
+        )
 
     async def log(
         self,

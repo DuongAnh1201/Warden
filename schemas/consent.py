@@ -32,6 +32,7 @@ ActionType = Literal[
     "gmail.trash",
     # Google Drive (state-changing, gated). list/read are not gated — no side effect.
     "drive.upload",
+    "drive.create_folder",
     "drive.update",
     "drive.share",
     "drive.delete",

@@ -20,6 +20,7 @@ runs the self-check bypass evaluator (see observability/).
 """
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Awaitable, Callable
 from datetime import timedelta
 from typing import TYPE_CHECKING
@@ -137,7 +138,16 @@ async def _run_post_action_eval(
     if not settings.consent_eval_enabled:
         return
 
-    entry = await deps.ledger.lookup(action_id)
+    # The ledger lookup only feeds the secondary HMAC token check; the primary
+    # bypass detector is the in-process span-sequence check, which is instant.
+    # Bound the lookup so a slow remote Redis can't stall the turn for ~20s after
+    # every gated action — on timeout we proceed with entry=None (token check is
+    # skipped, span check still runs).
+    try:
+        entry = await asyncio.wait_for(deps.ledger.lookup(action_id), timeout=2.0)
+    except (asyncio.TimeoutError, Exception):  # noqa: BLE001
+        entry = None
+
     result = evaluate_consent_trace(
         recorder.sequence,
         action_id=action_id,

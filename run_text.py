@@ -39,7 +39,6 @@ def build_check() -> None:
     from ai.agents.agent5 import get_knowledge_base_agent
     from ai.agents.agent6 import get_gmail_agent
     from ai.agents.agent7 import get_drive_agent
-    import tools.sending_email  # noqa: F401
     import tools.calendar  # noqa: F401
     import tools.communication  # noqa: F401
     import tools.knowledge_base  # noqa: F401

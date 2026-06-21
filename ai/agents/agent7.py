@@ -78,6 +78,31 @@ def get_drive_agent() -> Agent:
             )
 
         @_drive_agent.tool
+        async def create_drive_folder(
+            ctx: RunContext[OrchestratorDeps], request: DriveFileRequest
+        ) -> str:
+            """Create a new folder in Drive. Use request.name for the folder name and
+            request.folder_id for an optional parent folder."""
+            from tools.google_drive import create_folder
+
+            async def _execute() -> str:
+                return await asyncio.to_thread(
+                    create_folder,
+                    request.name,
+                    ctx.deps.workspace_creds,
+                    request.folder_id,
+                )
+
+            return await gate(
+                ctx,
+                action_type="drive.create_folder",
+                agent="drive_agent",
+                summary=f"Create Drive folder '{request.name}'",
+                payload={"name": request.name, "parent_id": request.folder_id},
+                execute=_execute,
+            )
+
+        @_drive_agent.tool
         async def update_drive_file(
             ctx: RunContext[OrchestratorDeps], request: DriveFileRequest
         ) -> str:

@@ -126,6 +126,35 @@ def upload_file(
     )
 
 
+FOLDER_MIME = "application/vnd.google-apps.folder"
+
+
+def create_folder(name: str, creds: Any = None, parent_id: str = "") -> str:
+    """Create a new folder in Drive. Returns a message including ``folder_id=<id>``.
+
+    A Drive folder is a file with the folder mime type and no media body.
+    """
+    require_consent("drive.create_folder")
+    if _demo(creds):
+        return f"[DEMO] Created folder '{name}' in Drive. folder_id=demo-{abs(hash(name)) % 10**8:08d}"
+    try:
+        metadata: dict = {"name": name, "mimeType": FOLDER_MIME}
+        if parent_id:
+            metadata["parents"] = [parent_id]
+        created = (
+            _service(creds)
+            .files()
+            .create(body=metadata, fields="id,name,webViewLink")
+            .execute()
+        )
+    except Exception as e:  # noqa: BLE001
+        raise RuntimeError(str(e)) from e
+    return (
+        f"Created folder '{created.get('name')}' in Drive. folder_id={created.get('id')} "
+        f"link={created.get('webViewLink', '')}"
+    )
+
+
 def update_file(file_id: str, content: str | bytes, creds: Any = None, mime_type: str = "text/plain") -> str:
     """Overwrite the content of an existing Drive file."""
     require_consent("drive.update")

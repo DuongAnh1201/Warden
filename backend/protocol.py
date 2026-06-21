@@ -39,6 +39,7 @@ ACTION_TOOL_NAMES: dict[str, str] = {
     "gmail.draft": "send_email",
     "gmail.trash": "gmail_triage",
     "drive.upload": "drive_write",
+    "drive.create_folder": "drive_write",
     "drive.update": "drive_write",
     "drive.share": "drive_write",
     "drive.delete": "drive_write",
@@ -59,6 +60,16 @@ def action_to_approval_request(req: ActionRequest) -> dict[str, Any]:
                 else "user_request"
             ),
             "link": req.payload.get("link"),
+        }
+    elif req.action_type == "agent.message":
+        # Render the Agentverse hand-off as a ticket with the same preview shape
+        # as an email, so the user reviews the recipient agent and message body.
+        preview = {
+            "to": str(req.payload.get("address", "")),
+            "subject": "Agentverse message",
+            "body": str(req.payload.get("message", "")),
+            "emailType": "agent_message",
+            "link": None,
         }
 
     return {

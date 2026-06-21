@@ -56,6 +56,17 @@ class WebSocketApprover:
         )
         return decision
 
+    def has_pending(self) -> bool:
+        """True while at least one approval is awaiting a decision."""
+        return any(not f.done() for f in self._pending.values())
+
+    def latest_pending_id(self) -> str | None:
+        """action_id of the most recent un-resolved approval, if any."""
+        for action_id, fut in reversed(list(self._pending.items())):
+            if not fut.done():
+                return action_id
+        return None
+
     def resolve(
         self,
         action_id: str,

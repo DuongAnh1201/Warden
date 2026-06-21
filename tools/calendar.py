@@ -67,6 +67,49 @@ def calendars(creds: Any = None) -> str:
     return f"Available calendars: {names}"
 
 
+def list_events(req: CalendarRequest, creds: Any = None) -> str:
+    """List events on a calendar within [start, end] (read-only — not gated).
+
+    Returns a human-readable list including each event's title, time, and id so
+    the agent can answer "what's on my calendar" and reference events for
+    update/delete.
+    """
+    cid = _calendar_id(req)
+    if _demo(creds):
+        return (
+            f"[DEMO] Events on '{cid}':\n"
+            "  • 'Standup' | 2026-06-22T09:00 → 09:15 | id=demo-evt-1\n"
+            "  • 'Design review' | 2026-06-22T14:00 → 15:00 | id=demo-evt-2"
+        )
+
+    params: dict = {
+        "calendarId": cid,
+        "singleEvents": True,
+        "orderBy": "startTime",
+        "maxResults": 20,
+    }
+    if req.start:
+        params["timeMin"] = _rfc3339(req.start)
+    if req.end:
+        params["timeMax"] = _rfc3339(req.end)
+    try:
+        items = _service(creds).events().list(**params).execute().get("items", [])
+    except Exception as e:  # noqa: BLE001
+        raise RuntimeError(str(e)) from e
+
+    if not items:
+        window = f" between {req.start} and {req.end}" if req.start and req.end else ""
+        return f"No events found on '{cid}'{window}."
+
+    lines: list[str] = []
+    for ev in items:
+        title = ev.get("summary", "(no title)")
+        start = ev.get("start", {}).get("dateTime") or ev.get("start", {}).get("date", "")
+        end = ev.get("end", {}).get("dateTime") or ev.get("end", {}).get("date", "")
+        lines.append(f"  • '{title}' | {start} → {end} | id={ev.get('id')}")
+    return f"{len(lines)} events on '{cid}':\n" + "\n".join(lines)
+
+
 def create_calendar_event(req: CalendarRequest, creds: Any = None) -> str:
     """Create an event. Returns a message including the new event id."""
     require_consent("calendar.create")

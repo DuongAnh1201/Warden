@@ -275,7 +275,7 @@ export default function App() {
     <VoiceAgentOverlay
       uiState={voiceAgentState.uiState}
       transcriptPreview={voiceAgentState.transcriptPreview}
-      timelineSteps={voiceAgentState.timelineSteps}
+      executions={voiceAgentState.executions}
       approvalRequest={voiceAgentState.approvalRequest}
       latestEmailDraft={voiceAgentState.latestEmailDraft}
       latestEmailDraftStatus={voiceAgentState.latestEmailDraftStatus}

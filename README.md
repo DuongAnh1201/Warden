@@ -235,7 +235,7 @@ PHYSICAL_CONSENT_REQUIRED=1
 ### Run it
 
 ```bash
-git clone <your-repo-url>
+git clone <repo-url>
 cd sss
 uv sync
 cd frontend && npm install && cd ..
@@ -263,14 +263,14 @@ A hosted version is available at **[your-demo-url]**. Open it, choose "Try as Gu
 - [x] Voice assistant with orchestrator + specialist agents
 - [x] Consent gate — approve / cancel / revise by voice
 - [x] Email, calendar, search, messaging, and knowledge agents
-- [ ] Voice layer on Deepgram (real-time, low-latency)
-- [ ] Cross-session memory + semantic knowledge (Redis)
-- [ ] Consent ledger + self-checked safety evals (Redis + Arize)
-- [ ] Google Drive agent with least-privilege access
+- [x] Voice layer on Deepgram (real-time, low-latency)
+- [x] Cross-session memory + semantic knowledge (Redis)
+- [x] Consent ledger + self-checked safety evals (Redis + Arize)
+- [x] Google Drive agent with least-privilege access
 - [ ] **Agent-to-agent coordination — peer-to-peer scheduling between two MoneyPenny users**
-- [ ] **Open-network hiring — discover and pay specialist agents (Fetch.ai)**
-- [ ] Consent policies — set trust tiers so MoneyPenny only interrupts when it matters
-- [ ] Proactive reminders — MoneyPenny reaches out to you first
+- [x] **Open-network hiring — discover and pay specialist agents (Fetch.ai)**
+- [x] Consent policies — set trust tiers so MoneyPenny only interrupts when it matters
+- [x] Proactive reminders — MoneyPenny reaches out to you first
 - [x] **Zero-trust physical consent gate — Raspberry Pi 5 + QNX (LCD, RGB, touch, buzzer)**
 
 ---

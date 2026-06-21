@@ -80,6 +80,19 @@ export interface ApprovalRequest {
   } | null;
 }
 
+export type ExecutionStatus = "pending" | "approved" | "rejected";
+
+/** One consequential action proposed this session, plus how it resolved.
+ * The Field Log shows every record — approved, rejected, or still pending. */
+export interface ExecutionRecord {
+  id: string;
+  title: string;
+  toolName: string;
+  summary: string;
+  status: ExecutionStatus;
+  request: ApprovalRequest;
+}
+
 export interface VoiceAgentCommand {
   id: string;
   rawText: string;
@@ -101,6 +114,7 @@ export interface VoiceAgentViewModel {
   uiState: AgentUIState;
   transcriptPreview: string;
   timelineSteps: TimelineStep[];
+  executions: ExecutionRecord[];
   approvalRequest: ApprovalRequest | null;
   latestEmailDraft: ApprovalRequest | null;
   latestEmailDraftStatus: EmailDraftLifecycleStatus | null;

@@ -22,6 +22,7 @@ def get_calendar_agent() -> Agent:
             name="calendar_agent",
             system_prompt=load_prompt("calendar_agent"),
             output_type=CalendarResult,
+            deps_type=OrchestratorDeps,
             capabilities=get_agent_instrumentation(),
         )
 
@@ -33,6 +34,20 @@ def get_calendar_agent() -> Agent:
                 return await asyncio.to_thread(_list, ctx.deps.workspace_creds)
             except RuntimeError as e:
                 return f"Failed to list calendars. Reason: {e}"
+
+        @_calendar_agent.tool
+        async def list_events(
+            ctx: RunContext[OrchestratorDeps],
+            req: CalendarRequest,
+        ) -> str:
+            """List/view events on a calendar within a time range (read-only).
+            Use this to answer 'what's on my calendar', 'what do I have tomorrow',
+            etc. Set req.start and req.end to bound the window."""
+            from tools.calendar import list_events as _list_events
+            try:
+                return await asyncio.to_thread(_list_events, req, ctx.deps.workspace_creds)
+            except RuntimeError as e:
+                return f"Failed to list events. Reason: {e}"
 
         @_calendar_agent.tool
         async def check_freebusy(

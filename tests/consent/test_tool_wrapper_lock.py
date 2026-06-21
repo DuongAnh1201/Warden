@@ -7,25 +7,25 @@ import pytest
 
 from tests.consent.conftest import fresh_grant, run
 from tools.execution_lock import ConsentError, consent_scope
-from tools.sending_email import send_user_email
+from tools.gmail import send_message
 
 
-def test_send_user_email_blocked_without_consent():
+def test_send_message_blocked_without_consent():
     with pytest.raises(ConsentError, match="no active consent grant"):
-        send_user_email("priya@example.com", "Hi", "body", api_key="")
+        send_message("priya@example.com", "Hi", "body")
 
 
-def test_send_user_email_succeeds_inside_consent_scope():
+def test_send_message_succeeds_inside_consent_scope():
     grant = fresh_grant(action_type="email.send")
 
     async def _run():
         with consent_scope(grant):
             return await asyncio.to_thread(
-                send_user_email,
+                send_message,
                 "priya@example.com",
                 "Hi",
                 "body",
-                "",
             )
 
-    assert run(_run()) == "ok"
+    # Demo mode (no creds) simulates the send and returns without raising.
+    assert "priya@example.com" in run(_run())

@@ -1,0 +1,1 @@
+Mandatory class on June 22, 2026, at 10 AM.

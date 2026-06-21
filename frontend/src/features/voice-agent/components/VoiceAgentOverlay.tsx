@@ -3,7 +3,7 @@ import {
   ApprovalRequest,
   AgentUIState,
   EmailDraftLifecycleStatus,
-  TimelineStep,
+  ExecutionRecord,
   VoiceAgentCapability,
 } from "../types/voiceAgent.types";
 import { CapabilityPanel } from "./CapabilityPanel";
@@ -15,7 +15,7 @@ import { VoiceCommandBar } from "./VoiceCommandBar";
 export function VoiceAgentOverlay({
   uiState,
   transcriptPreview,
-  timelineSteps,
+  executions,
   approvalRequest,
   latestEmailDraft,
   latestEmailDraftStatus,
@@ -33,7 +33,7 @@ export function VoiceAgentOverlay({
 }: {
   uiState: AgentUIState;
   transcriptPreview: string;
-  timelineSteps: TimelineStep[];
+  executions: ExecutionRecord[];
   approvalRequest: ApprovalRequest | null;
   latestEmailDraft: ApprovalRequest | null;
   latestEmailDraftStatus: EmailDraftLifecycleStatus | null;
@@ -75,7 +75,7 @@ export function VoiceAgentOverlay({
             />
             <ExecutionTimeline
               jobId={jobId}
-              steps={timelineSteps}
+              executions={executions}
               approvalRequest={approvalRequest}
               onApprove={onApprove}
               onCancel={onCancel}

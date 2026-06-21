@@ -1,5 +1,17 @@
-import { Mail } from 'lucide-react';
 import { ApprovalRequest, EmailDraftLifecycleStatus } from '../types/voiceAgent.types';
+import { iconForToolName, labelForToolName } from '../utils/executionPresentation';
+import { VoiceAgentIcon } from './VoiceAgentIcons';
+
+function previewTypeLabel(emailType: string): string {
+  switch (emailType) {
+    case 'notification':
+      return 'Notification Email';
+    case 'agent_message':
+      return 'Agent Message';
+    default:
+      return 'User Request';
+  }
+}
 
 function statusLabelForDraft(status: EmailDraftLifecycleStatus) {
   switch (status) {
@@ -37,11 +49,17 @@ export function ApprovalCard({
   const preview = request.preview;
   const statusLabel = statusLabelForDraft(draftStatus);
   const statusClassName = statusClassNameForDraft(draftStatus);
+  const capabilityLabel = labelForToolName(request.toolName);
+  const iconName = iconForToolName(request.toolName);
+  const isEmailLike =
+    request.preview?.emailType !== 'agent_message' &&
+    capabilityLabel === 'Email';
+  const recipientLabel = isEmailLike ? 'Recipient' : 'Send to';
   const voiceHint =
     draftStatus === 'pending'
       ? "Say 'send it', 'cancel it', or tell Désir what to change."
       : draftStatus === 'approved'
-        ? 'Sent after voice confirmation.'
+        ? 'Confirmed by voice.'
         : 'Cancelled by voice.';
 
   return (
@@ -51,12 +69,12 @@ export function ApprovalCard({
     >
       <div className="flex items-start gap-4">
         <div className="mt-0.5 rounded-lg border border-white/10 bg-white/5 p-3 text-[#d4d4d4]">
-          <Mail size={22} strokeWidth={1.8} />
+          <VoiceAgentIcon name={iconName} className="h-[22px] w-[22px]" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <div className="text-[10px] uppercase tracking-[1.2px] text-[#737373]">
-              {request.title}
+              {capabilityLabel} · {request.title}
             </div>
             <div className={`rounded-full border px-2 py-1 text-[10px] uppercase tracking-[1px] ${statusClassName}`}>
               {statusLabel}
@@ -105,10 +123,10 @@ export function ApprovalCard({
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
             <div className="grid gap-2">
               <div className="text-[11px] font-medium uppercase tracking-[1px] text-[#737373]">
-                Recipient
+                {recipientLabel}
               </div>
               <div
-                className="rounded-md border bg-[#0d0d0d] px-4 py-3 text-[12px] text-white"
+                className="rounded-md border bg-[#0d0d0d] px-4 py-3 text-[12px] text-white break-all"
                 style={{ borderColor: 'var(--voice-agent-border)' }}
               >
                 {preview.to}
@@ -122,7 +140,7 @@ export function ApprovalCard({
                 className="rounded-md border bg-[#0d0d0d] px-4 py-3 text-[12px] text-white"
                 style={{ borderColor: 'var(--voice-agent-border)' }}
               >
-                {preview.emailType === 'notification' ? 'Notification Email' : 'User Request'}
+                {previewTypeLabel(preview.emailType)}
               </div>
             </div>
           </div>

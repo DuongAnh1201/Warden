@@ -75,6 +75,19 @@ def test_verify_ledger_token_matches_hmac():
     assert verify_ledger_token(entry, token, req.action_id).ok
 
 
+def test_verify_ledger_token_missing_entry_is_not_bypass():
+    """Redis lookup failure (entry=None) must not trigger the kill switch."""
+    result = verify_ledger_token(None, "some-token", "action-xyz")
+    assert result.ok, f"Expected ok=True for missing entry, got: {result.reason}"
+
+
+def test_evaluate_consent_trace_missing_entry_does_not_kill():
+    """Full trace eval with entry=None should pass — span sequence is the real check."""
+    seq = [INTENT_GENERATED, GATE_PAUSED, VOICE_APPROVAL, LEDGER_APPENDED, TOOL_EXECUTED]
+    result = evaluate_consent_trace(seq, action_id="a1", ledger_token="tok", entry=None)
+    assert result.ok, f"Expected ok=True for missing ledger entry, got: {result.reason}"
+
+
 def test_kill_switch_freezes_session():
     trigger_kill_switch(KillSwitchEvent(reason="test bypass", action_id="x"))
     assert is_session_frozen()

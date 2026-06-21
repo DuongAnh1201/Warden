@@ -73,6 +73,24 @@ def get_orchestrator() -> Agent:
             return result.output.message
 
         @_orchestrator.tool
+        async def delegate_calendar(
+            ctx: RunContext[OrchestratorDeps],
+            request: str,
+        ) -> str:
+            """Delegate a calendar request to the calendar sub-agent.
+            Use for creating, updating, deleting events, listing calendars, and
+            checking free/busy. Pass the full user request as-is, including any
+            dates/times the user gave.
+            """
+            from ai.agents.agent2 import get_calendar_agent
+            from ai.session.clock import with_datetime_context
+
+            result = await get_calendar_agent().run(
+                with_datetime_context(request), deps=ctx.deps
+            )
+            return result.output.message
+
+        @_orchestrator.tool
         async def delegate_search(
             ctx: RunContext[OrchestratorDeps],
             query: str,

@@ -5,16 +5,17 @@ from pydantic import BaseModel
 
 
 class CalendarEvents(BaseModel):
-    calendarname: str = "khoiduong2913@gmail.com"
+    calendarname: str = "primary"
     fromdate: str
     todate: str
     query: str
 
 
 class CalendarRequest(BaseModel):
-    calendarName: str = "khoiduong2913@gmail.com"
-    """Google Calendar id. The user's email addresses their primary calendar;
-    'primary' also works. (Not a macOS calendar name.)"""
+    calendarName: str = "primary"
+    """Google Calendar id. 'primary' targets the authenticated user's own primary
+    calendar (the safe default). A specific calendar id / email also works if the
+    user has access. (Not a macOS calendar name.)"""
     title: str = ""
     id: str = ""
     start: datetime | None = None

@@ -49,16 +49,16 @@ class Settings:
     serper_api_key: str = os.getenv("SERPER_API_KEY")
     """Required for live event search in Agent 2 (Phase 4+)."""
 
-    resend_api_key: str = os.getenv("RESEND_API_KEY", "")
-    """Resend API key for sending emails."""
-
-    resend_from: str = os.getenv("RESEND_FROM", "Moneypenny <onboarding@resend.dev>")
-    """Sender address. Use a verified domain in production."""
-
     file_path: str = os.getenv("FILE_PATH")
     """Path to the knowledge base."""
 
-    redis_url: str = os.getenv("REDIS_URL", "")
+    # DEMO: Redis disabled — the remote Redis Cloud reads are too slow for a live
+    # demo (multi-second stalls after each action). Forcing this empty makes every
+    # consumer fall back to its fast local path: FileLedger (JSONL) for the consent
+    # ledger, in-memory/None for knowledge + execution log, and the Agentverse
+    # bridge reports itself unavailable. Re-enable by restoring the os.getenv line.
+    redis_url: str = ""
+    # redis_url: str = os.getenv("REDIS_URL", "")
     """Optional Redis connection URL (e.g. redis://localhost:6379).
     When set, the consent ledger uses Redis Streams; otherwise FileLedger (JSONL).
     User memory / knowledge namespaces also use Redis when your teammate wires them up."""

@@ -1,14 +1,21 @@
-"""Minimal echo agent for local agent-to-agent demo.
+"""Minimal echo agent for agent-to-agent demo.
 
-Run this in a separate terminal:
-    uv run python tests/demo_agent.py
+Local usage (two terminals):
+    terminal 1:  uv run python -m ai.transport.fetch_wrapper
+    terminal 2:  uv run python tests/demo_agent.py
 
-It will print its Fetch.ai address. Paste that address into the chat:
-    "Ask the agent at agent1q... what the weather is like"
+Then in the chat UI:
+    "Ask the agent at <address> what the weather is"
 
 The echo agent replies with:  ECHO from DemoAgent: <your message>
 You will see the full round-trip in both terminals' logs.
+
+Cloud usage (agent lives on Agentverse):
+    Set AGENTVERSE_API_KEY in environment and the agent runs in mailbox mode,
+    reachable from anywhere including Railway-deployed MoneyPenny.
 """
+import os
+
 from uagents import Agent, Context, Model
 
 
@@ -25,22 +32,27 @@ class SSSResponse(Model):
     correlation_id: str = ""
 
 
+_api_key = os.getenv("AGENTVERSE_API_KEY", "")
+
 demo = Agent(
     name="demo_echo_agent",
     seed="demo-echo-agent-seed-for-local-testing-only",
     port=8002,
+    mailbox=bool(_api_key),
 )
 
 
 @demo.on_event("startup")
 async def on_start(ctx: Context) -> None:
+    mode = "mailbox (cloud-reachable)" if _api_key else "local only (port 8002)"
     print()
     print("=" * 60)
     print("  Demo Echo Agent")
     print(f"  Address : {demo.address}")
+    print(f"  Mode    : {mode}")
     print()
     print("  Paste this into the chat UI:")
-    print(f'  "Ask the agent at {demo.address} what the weather is"')
+    print(f'  "Send a message to agent at {demo.address} saying hello"')
     print("=" * 60)
     print()
 

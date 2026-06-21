@@ -46,7 +46,7 @@ _FINAL_EVENTS = {"EndOfTurn", "EagerEndOfTurn"}
 
 API_KEY   = settings.deepgram_api_key
 STT_MODEL = settings.transcription_model or "flux-general-en"
-TTS_MODEL = settings.voice_model or "aura-2-theia-en"
+TTS_MODEL = settings.voice_model or "aura-2-athena-en"
 
 INPUT_SAMPLE_RATE = 16000
 TTS_SAMPLE_RATE   = 24000

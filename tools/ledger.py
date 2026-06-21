@@ -124,9 +124,9 @@ class RedisLedger:
         self._redis = aioredis.from_url(
             url,
             decode_responses=True,
-            socket_connect_timeout=5,
-            socket_timeout=5,
-            retry_on_timeout=False,
+            socket_connect_timeout=10,
+            socket_timeout=20,      # xrevrange can be slow on remote Redis; must not race the evaluator
+            retry_on_timeout=True,  # transient timeouts should not cause an evaluator false-positive
         )
         # In-process fallback used when Redis is unreachable.
         self._fallback = FileLedger()

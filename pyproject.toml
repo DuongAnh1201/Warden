@@ -30,7 +30,6 @@ dependencies = [
     "websockets>=13.0",
     "httpx>=0.28.0",
     "openai>=1.75.0",
-    "resend>=2.23.0",
     "resen>=2021.1.0",
     "watchfiles>=0.22.0",
     "fastapi[standard]>=0.135.2",

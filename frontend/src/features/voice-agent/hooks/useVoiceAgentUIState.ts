@@ -5,6 +5,8 @@ import {
   AgentEventPayload,
   CapabilityStatus,
   EmailDraftLifecycleStatus,
+  ExecutionRecord,
+  ExecutionStatus,
   TimelineStep,
   TimelineStepStatus,
   VoiceAgentCapability,
@@ -101,6 +103,32 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+function upsertExecution(
+  executions: ExecutionRecord[],
+  record: ExecutionRecord,
+): ExecutionRecord[] {
+  const index = executions.findIndex((entry) => entry.id === record.id);
+  if (index === -1) {
+    return [...executions, record];
+  }
+  const next = [...executions];
+  next[index] = {...next[index], ...record};
+  return next;
+}
+
+function markExecutionStatus(
+  executions: ExecutionRecord[],
+  id: string | undefined,
+  status: ExecutionStatus,
+): ExecutionRecord[] {
+  if (!id) {
+    return executions;
+  }
+  return executions.map((entry) =>
+    entry.id === id ? {...entry, status} : entry,
+  );
+}
+
 function cloneCapabilities(capabilities: VoiceAgentCapability[]): VoiceAgentCapability[] {
   return capabilities.map((capability) => ({...capability}));
 }
@@ -137,6 +165,7 @@ function createInitialState(
     uiState: 'idle',
     transcriptPreview: '"Tap the orb to begin a voice session."',
     timelineSteps: [],
+    executions: [],
     approvalRequest: null,
     latestEmailDraft: null,
     latestEmailDraftStatus: null,
@@ -416,6 +445,15 @@ function completeCommand(
   };
 }
 
+function isEmailRequest(request: ApprovalRequest): boolean {
+  const tool = (request.toolName || '').toLowerCase();
+  const emailType = request.preview?.emailType ?? '';
+  return (
+    (tool.includes('mail') || tool.includes('email')) &&
+    emailType !== 'agent_message'
+  );
+}
+
 function syncLatestEmailDraft(
   state: VoiceAgentReducerState,
   request: ApprovalRequest | null,
@@ -424,7 +462,10 @@ function syncLatestEmailDraft(
   VoiceAgentReducerState,
   'latestEmailDraft' | 'latestEmailDraftStatus' | 'capabilities'
 > {
-  if (!request || !draftStatus) {
+  // Only real email actions populate the right-hand "email draft" panel.
+  // Drive / Calendar / Agentverse actions are tracked in the Field Log instead,
+  // so they no longer masquerade as emails.
+  if (!request || !draftStatus || !isEmailRequest(request)) {
     return {
       latestEmailDraft: state.latestEmailDraft,
       latestEmailDraftStatus: state.latestEmailDraftStatus,
@@ -672,11 +713,20 @@ function reducer(state: VoiceAgentReducerState, action: VoiceAgentAction): Voice
                 : {},
             });
             const latestDraftState = syncLatestEmailDraft(state, event.request, 'pending');
+            const executions = upsertExecution(state.executions, {
+              id: event.request.id,
+              title: event.request.title,
+              toolName: event.request.toolName,
+              summary: event.request.summary,
+              status: 'pending',
+              request: event.request,
+            });
 
           return {
             ...state,
             uiState: 'waiting_approval',
             approvalRequest: event.request,
+            executions,
             latestEmailDraft: latestDraftState.latestEmailDraft,
             latestEmailDraftStatus: latestDraftState.latestEmailDraftStatus,
             hintText: "Say 'send it', 'cancel it', or describe what should change.",
@@ -710,21 +760,29 @@ function reducer(state: VoiceAgentReducerState, action: VoiceAgentAction): Voice
     case 'RESOLVE_APPROVAL': {
       const listeningFlow = state.activeFlow ?? resolveMockVoiceFlow('');
       const resolvedStatus = approvalDecisionToDraftStatus(action.decision);
-      const latestDraft = state.approvalRequest ?? state.latestEmailDraft;
-      const capabilities = latestDraft
+      const resolvingRequest = state.approvalRequest ?? state.latestEmailDraft;
+      const resolvingIsEmail =
+        !!resolvingRequest && isEmailRequest(resolvingRequest);
+      const capabilities = resolvingIsEmail
         ? upsertEmailDraftCapability(
             resetActiveCapabilities(state.capabilities),
-            latestDraft,
+            resolvingRequest,
             resolvedStatus,
           )
         : resetActiveCapabilities(state.capabilities);
+      const executions = markExecutionStatus(
+        state.executions,
+        state.approvalRequest?.id ?? state.latestEmailDraft?.id,
+        action.decision === 'approved' ? 'approved' : 'rejected',
+      );
 
       return {
         ...state,
         uiState: 'listening',
         approvalRequest: null,
-        latestEmailDraft: latestDraft,
-        latestEmailDraftStatus: latestDraft ? resolvedStatus : state.latestEmailDraftStatus,
+        executions,
+        latestEmailDraft: resolvingIsEmail ? resolvingRequest : state.latestEmailDraft,
+        latestEmailDraftStatus: resolvingIsEmail ? resolvedStatus : state.latestEmailDraftStatus,
         hintText: 'Listening to user intent...',
         timelineSteps: createListeningTimeline(listeningFlow),
         activeFlow: listeningFlow,

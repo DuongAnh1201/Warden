@@ -1,32 +1,53 @@
-import {ApprovalRequest, TimelineStep} from '../types/voiceAgent.types';
+import {
+  ApprovalRequest,
+  ExecutionRecord,
+  TimelineStep,
+  TimelineStepStatus,
+} from '../types/voiceAgent.types';
+import {iconForToolName} from '../utils/executionPresentation';
 import {voiceAgentLayoutTokens} from '../utils/voiceAgentLayoutTokens';
 import {ApprovalCard} from './ApprovalCard';
 import {ExecutionTimelineItem} from './ExecutionTimelineItem';
 
+function statusToStep(status: ExecutionRecord['status']): {
+  step: TimelineStepStatus;
+  badge: string;
+} {
+  switch (status) {
+    case 'approved':
+      return {step: 'completed', badge: 'APPROVED'};
+    case 'rejected':
+      return {step: 'error', badge: 'REJECTED'};
+    default:
+      return {step: 'active', badge: 'PENDING'};
+  }
+}
+
+function executionToTimelineStep(execution: ExecutionRecord): TimelineStep {
+  const {step, badge} = statusToStep(execution.status);
+  return {
+    id: execution.id,
+    title: execution.title,
+    subtitle: execution.summary,
+    icon: iconForToolName(execution.toolName),
+    status: step,
+    badgeLabel: badge,
+  };
+}
+
 export function ExecutionTimeline({
   jobId,
-  steps,
+  executions,
   approvalRequest,
   onApprove,
   onCancel,
 }: {
   jobId: string;
-  steps: TimelineStep[];
+  executions: ExecutionRecord[];
   approvalRequest: ApprovalRequest | null;
   onApprove?: () => void;
   onCancel?: () => void;
 }) {
-  const hasApprovalStep = steps.some((step) => step.status === 'waiting_approval');
-  const fallbackApprovalStep: TimelineStep | null = approvalRequest && !hasApprovalStep
-    ? {
-        id: `${approvalRequest.id}-approval-fallback`,
-        title: approvalRequest.title,
-        subtitle: approvalRequest.summary,
-        icon: 'lock',
-        status: 'waiting_approval',
-      }
-    : null;
-
   return (
     <section className="flex min-h-[360px] flex-col bg-[var(--voice-agent-center-shell)] xl:min-h-0 xl:overflow-hidden">
       <div
@@ -40,7 +61,7 @@ export function ExecutionTimeline({
           className="text-[11px] text-[#525252]"
           style={{fontFamily: 'var(--font-voice-agent-mono)'}}
         >
-          {jobId}
+          {executions.length > 0 ? `${executions.length} logged` : jobId}
         </span>
       </div>
 
@@ -53,7 +74,7 @@ export function ExecutionTimeline({
           style={{left: voiceAgentLayoutTokens.timelinePadding + 19, backgroundColor: 'var(--voice-agent-border)'}}
         />
 
-        {steps.length === 0 && !fallbackApprovalStep ? (
+        {executions.length === 0 ? (
           <div className="relative flex h-full min-h-[240px] items-center pl-16">
             <div>
               <div className="royal-display text-[20px] italic text-(--voice-agent-gold-bright)">
@@ -66,28 +87,26 @@ export function ExecutionTimeline({
           </div>
         ) : (
           <div className="relative flex flex-col gap-8">
-            {steps.map((step) => (
-              <ExecutionTimelineItem key={step.id} step={step}>
-                {approvalRequest && step.status === 'waiting_approval' ? (
-                  <ApprovalCard
-                    request={approvalRequest}
-                    draftStatus="pending"
-                    onApprove={onApprove}
-                    onCancel={onCancel}
-                  />
-                ) : null}
-              </ExecutionTimelineItem>
-            ))}
-            {fallbackApprovalStep ? (
-              <ExecutionTimelineItem key={fallbackApprovalStep.id} step={fallbackApprovalStep}>
-                <ApprovalCard
-                  request={approvalRequest}
-                  draftStatus="pending"
-                  onApprove={onApprove}
-                  onCancel={onCancel}
-                />
-              </ExecutionTimelineItem>
-            ) : null}
+            {executions.map((execution) => {
+              const isPending =
+                execution.status === 'pending' &&
+                approvalRequest?.id === execution.id;
+              return (
+                <ExecutionTimelineItem
+                  key={execution.id}
+                  step={executionToTimelineStep(execution)}
+                >
+                  {isPending ? (
+                    <ApprovalCard
+                      request={approvalRequest}
+                      draftStatus="pending"
+                      onApprove={onApprove}
+                      onCancel={onCancel}
+                    />
+                  ) : null}
+                </ExecutionTimelineItem>
+              );
+            })}
           </div>
         )}
       </div>

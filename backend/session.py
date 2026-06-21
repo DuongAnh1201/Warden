@@ -18,6 +18,29 @@ _SENT_RE = re.compile(r'(?<=[.!?…])\s+(?=[A-Z"\'])')
 def _split_sentences(text: str) -> list[str]:
     parts = _SENT_RE.split(text.strip())
     return [p.strip() for p in parts if p.strip()]
+
+
+_APPROVE_TOKENS = {"yes", "yeah", "yep", "yup", "sure", "ok", "okay", "confirm",
+                   "confirmed", "approve", "approved", "correct", "perfect"}
+_APPROVE_PHRASES = ("send it", "go ahead", "do it", "sounds good", "looks good",
+                    "send the email", "please send", "ship it", "that's right")
+_CANCEL_TOKENS = {"no", "nope", "cancel", "stop", "abort", "nevermind"}
+_CANCEL_PHRASES = ("don't", "do not", "never mind", "forget it", "hold off", "not now")
+
+
+def _classify_consent_intent(text: str) -> str:
+    """Map a spoken reply to a consent decision: approve | cancel | revise.
+
+    Conservative on approval (must be an explicit yes) so an ambiguous utterance
+    is never auto-sent; anything that isn't a clear yes/no becomes a revision.
+    """
+    t = text.strip().lower()
+    words = set(re.findall(r"[a-z']+", t))
+    if words & _APPROVE_TOKENS or any(p in t for p in _APPROVE_PHRASES):
+        return "approve"
+    if words & _CANCEL_TOKENS or any(p in t for p in _CANCEL_PHRASES):
+        return "cancel"
+    return "revise"
 from backend.approval import WebSocketApprover
 from backend.protocol import serialize_ledger_entry
 from backend.voice_pipeline import VoicePipeline
@@ -39,6 +62,7 @@ class AgentSession:
         self._started = False
         self._voice: VoicePipeline | None = None
         self._turns: list[dict[str, str]] = []
+        self._tail_task: asyncio.Task | None = None  # detached ledger-refresh task
 
     async def send_json(self, payload: dict[str, Any]) -> None:
         await self._ws.send_text(json.dumps(payload))
@@ -132,8 +156,35 @@ class AgentSession:
         logger.debug("ignored message type=%s", msg_type)
 
     async def _handle_voice_transcript(self, transcript: str) -> None:
-        await self.send_json({"type": "transcript", "role": "user", "text": transcript})
+        # If the consent gate is waiting for a decision, the user is answering it
+        # by voice — route the utterance to the pending approval instead of
+        # launching a brand-new turn (which would deadlock behind the paused one).
+        if self._approver.has_pending():
+            await self.send_json({"type": "transcript", "role": "user", "text": transcript})
+            self._resolve_pending_by_voice(transcript)
+            return
+
+        # A turn is already running (thinking/streaming) — ignore overlapping
+        # speech rather than queueing a second turn behind it.
+        if self._run_lock.locked():
+            logger.info("[voice] busy with a turn — ignoring: %s", transcript)
+            return
+
         await self.run_prompt(transcript, tts=True)
+
+    def _resolve_pending_by_voice(self, transcript: str) -> None:
+        """Interpret a spoken utterance as approve / cancel / revise for the open gate."""
+        action_id = self._approver.latest_pending_id()
+        if not action_id:
+            return
+        intent = _classify_consent_intent(transcript)
+        if intent == "approve":
+            self._approver.resolve(action_id, "approve")
+        elif intent == "cancel":
+            self._approver.resolve(action_id, "cancel")
+        else:  # anything else is treated as a revision instruction
+            self._approver.resolve(action_id, "revise", revision_note=transcript)
+        logger.info("[voice] consent %s via voice: %s", intent, transcript)
 
     async def _send_audio_chunk(self, base64_data: str) -> None:
         await self.send_json({"type": "audio", "data": base64_data})
@@ -210,7 +261,11 @@ class AgentSession:
                 await self.send_json({"type": "error", "message": str(exc)})
             finally:
                 await self.send_json({"type": "state", "speaking": False})
-                await self.push_ledger_tail()
+                # Ledger tail is just a UI refresh — run it detached so a slow
+                # Redis read can never wedge the turn. A wedged turn would leave
+                # the voice barge-in flag stuck True and silently drop every
+                # following utterance (the "stops transcribing after one turn" bug).
+                self._tail_task = asyncio.create_task(self._safe_push_ledger_tail())
 
     async def _compact_session(self) -> None:
         if not self._turns or self._deps is None:
@@ -263,6 +318,15 @@ class AgentSession:
             logger.info("[session] compacted to graph node: %s", label)
         except Exception:
             logger.exception("[session] compact failed — session not saved")
+
+    async def _safe_push_ledger_tail(self) -> None:
+        """Refresh the ledger UI panel without ever blocking or crashing a turn."""
+        try:
+            await asyncio.wait_for(self.push_ledger_tail(), timeout=10.0)
+        except asyncio.TimeoutError:
+            logger.warning("push_ledger_tail timed out — skipping UI refresh")
+        except Exception:  # noqa: BLE001
+            logger.warning("push_ledger_tail failed — skipping UI refresh", exc_info=True)
 
     async def push_ledger_tail(self, limit: int = 10) -> None:
         if self._deps is None:

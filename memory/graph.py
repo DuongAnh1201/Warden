@@ -48,7 +48,13 @@ class GraphNode:
 class GraphKnowledge:
     def __init__(self, redis_url: str, openai_api_key: str) -> None:
         # Vectors are raw bytes — do NOT use decode_responses=True.
-        self._r = _redis.from_url(redis_url, decode_responses=False)
+        self._r = _redis.from_url(
+            redis_url,
+            decode_responses=False,
+            socket_connect_timeout=10,
+            socket_timeout=20,
+            retry_on_timeout=True,
+        )
         self._openai_key = openai_api_key
         self._index_ready = False
 

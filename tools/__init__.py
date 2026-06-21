@@ -11,6 +11,13 @@ Set ``DESIR_DEMO=0`` in the environment to perform real actions.
 import os
 import sys
 
+from dotenv import load_dotenv
+
+# Load .env here too: DEMO_MODE is read at import time, and if this module is
+# imported before config.load_dotenv() runs, DESIR_DEMO from .env would be missed
+# and demo mode would wrongly default to on. load_dotenv() is idempotent.
+load_dotenv()
+
 DEMO_MODE: bool = os.getenv("DESIR_DEMO", "1") not in ("0", "false", "False", "")
 """When True (the default), real-world tools simulate instead of acting."""
 
