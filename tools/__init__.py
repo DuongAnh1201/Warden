@@ -1,9 +1,10 @@
 """Concrete tools the agents call to act in the real world.
 
-Many tools touch macOS-native surfaces (Calendar, Messages, Contacts) or send
-real email. To keep the assistant runnable in CI, on non-macOS machines, and in
-the hosted "Try as Guest" demo, every such tool checks :data:`DEMO_MODE` and
-simulates the action instead of performing it.
+Some tools touch macOS-native surfaces (Messages, Contacts), some call cloud APIs
+(Resend for email, Google Calendar), and some are local (knowledge base). To keep
+the assistant runnable in CI, on non-macOS machines, and in the hosted "Try as
+Guest" demo, every such tool checks :data:`DEMO_MODE` and simulates the action
+instead of performing it.
 
 Set ``DESIR_DEMO=0`` in the environment to perform real actions.
 """
@@ -14,4 +15,4 @@ DEMO_MODE: bool = os.getenv("DESIR_DEMO", "1") not in ("0", "false", "False", ""
 """When True (the default), real-world tools simulate instead of acting."""
 
 IS_MACOS: bool = sys.platform == "darwin"
-"""macOS-native tools (Calendar/Messages/Contacts) only work when this is True."""
+"""macOS-native tools (Messages/Contacts) only work when this is True."""

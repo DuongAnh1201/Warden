@@ -3,13 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "desir"
+name = "moneypenny"
 version = "0.1.0"
 description = "A command-line tool"
 requires-python = ">=3.13"
 license = "MIT"
 authors = [
-    { name = "TomNguyen", email = "tomnguyen6766@gmail.com" },
+    { name = "KhoiNguyen", email = "khoiduong2913@gmail.com" },
 ]
 dependencies = [
     "google-api-python-client>=2.192.0",
@@ -47,7 +47,14 @@ dependencies = [
 ]
 
 [project.scripts]
-desir = "desir:main"
+moneypenny = "moneypenny:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+markers = [
+    "integration: live tests that hit real Google APIs (opt-in via RUN_GOOGLE_INTEGRATION=1)",
+]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/desir"]
+packages = ["src/moneypenny"]

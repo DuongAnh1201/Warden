@@ -1,4 +1,5 @@
 """Schemas for the Email agent."""
+
 from typing import Literal
 from pydantic import BaseModel
 
@@ -21,15 +22,14 @@ class EmailDraft(BaseModel):
     link: str = ""
 
 
-
 class NotificationEmailRequest(BaseModel):
     recipient: str
     subject: str
     details: str
     link: str = ""
-    sender_name: str = "Desir"
+    sender_name: str = "Moneypenny"
     api_key: str = ""
-    from_address: str = "Desir <onboarding@resend.dev>"
+    from_address: str = "Moneypenny <onboarding@resend.dev>"
     scheduleAt: str | None = None
 
 
@@ -51,6 +51,7 @@ class EmailRequest(BaseModel):
 class EmailResult(BaseModel):
     success: bool
     message: str
+
 
 class SpokenEmailDraftExtraction(BaseModel):
     is_email_intent: bool = False

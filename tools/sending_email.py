@@ -4,6 +4,7 @@ All functions are synchronous; the agents call them through ``asyncio.to_thread`
 In :data:`DEMO_MODE` (or when no API key is configured) nothing is sent — the
 call is logged and reported as successful so the full flow stays demoable.
 """
+
 from __future__ import annotations
 
 from schemas.agent1 import NotificationEmailRequest
@@ -12,7 +13,9 @@ from tools.execution_lock import require_consent
 
 
 def _simulate(kind: str, recipient: str, subject: str) -> str:
-    print(f"[DEMO] {kind} email -> {recipient} | subject: {subject!r} (not actually sent)")
+    print(
+        f"[DEMO] {kind} email -> {recipient} | subject: {subject!r} (not actually sent)"
+    )
     return "ok"
 
 
@@ -21,7 +24,7 @@ def send_user_email(
     subject: str,
     body: str,
     api_key: str = "",
-    from_address: str = "Desir <onboarding@resend.dev>",
+    from_address: str = "Moneypenny <onboarding@resend.dev>",
 ) -> str:
     """Send a plain-text email. Returns ``"ok"`` or an error message string."""
     require_consent("email.send")
@@ -95,7 +98,11 @@ def add_domain(domain_name: str):
             "id": "demo-domain-id",
             "records": [
                 {"type": "TXT", "name": domain_name, "value": "demo-verification"},
-                {"type": "MX", "name": domain_name, "value": "feedback-smtp.resend.dev"},
+                {
+                    "type": "MX",
+                    "name": domain_name,
+                    "value": "feedback-smtp.resend.dev",
+                },
             ],
         }
 

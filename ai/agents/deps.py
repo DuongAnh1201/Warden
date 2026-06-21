@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
+from typing import Any
 from ai.prompts import load_prompt
 from tools.ledger import ConsentLedger, get_ledger
 from schemas.consent import ActionDecision, ActionRequest
@@ -17,8 +18,8 @@ class OrchestratorDeps:
 
     history_context: dict = field(default_factory=dict)
     preferred_pronouns: str = field(default="Sir")
-    name: str = field(default="Tom")
-    email_address: str = field(default="tomnguyen6766@gmail.com")
+    name: str = field(default="Khoi")
+    email_address: str = field(default="khoiduong2913@gmail.com")
     tom_history_context: str = field(default=_TOM_HISTORY)
     search_api_key: str = field(default="")
     calendar_event_ids: dict = field(default_factory=dict)
@@ -33,8 +34,8 @@ class OrchestratorDeps:
     Always-on: logs both successes and failures."""
 
     # ── Consent gate ───────────────────────────────────────────────────────────
-    request_approval: Callable[[ActionRequest], Awaitable[ActionDecision]] | None = field(
-        default=None
+    request_approval: Callable[[ActionRequest], Awaitable[ActionDecision]] | None = (
+        field(default=None)
     )
     """Async callback set by the session/UI layer.
 
@@ -50,3 +51,10 @@ class OrchestratorDeps:
     """When True, all gated actions are auto-approved without prompting.
     Only for smoke tests and the demo 'Try as Guest' persona. Still writes to the ledger.
     """
+
+    # ── Google Workspace ─────────────────────────────────────────────────────────
+    workspace_creds: Any = field(default=None)
+    """Google OAuth credentials from the user's Workspace connect flow (Drive,
+    Gmail, Calendar). None until the user opts in and completes the grant; while
+    None, workspace-backed tools (e.g. Google Calendar) run in demo mode.
+    See docs/workspace-integration/."""

@@ -25,10 +25,10 @@ def get_calendar_agent() -> Agent:
 
         @_calendar_agent.tool
         async def list_calendars(ctx: RunContext[OrchestratorDeps]) -> str:
-            """List all available Apple Calendars."""
+            """List all available Google Calendars."""
             from tools.calendar import calendars as _list
             try:
-                return await asyncio.to_thread(_list)
+                return await asyncio.to_thread(_list, ctx.deps.workspace_creds)
             except RuntimeError as e:
                 return f"Failed to list calendars. Reason: {e}"
 
@@ -42,7 +42,7 @@ def get_calendar_agent() -> Agent:
             if not req.start or not req.end:
                 return "Start and end time are required for free/busy check. Do not retry."
             try:
-                return await asyncio.to_thread(_freebusy, req)
+                return await asyncio.to_thread(_freebusy, req, ctx.deps.workspace_creds)
             except RuntimeError as e:
                 return f"Failed to check free/busy. Do not retry. Reason: {e}"
 
@@ -55,7 +55,7 @@ def get_calendar_agent() -> Agent:
             from tools.calendar import create_calendar_event as _create
 
             async def _execute() -> str:
-                output = await asyncio.to_thread(_create, req)
+                output = await asyncio.to_thread(_create, req, ctx.deps.workspace_creds)
                 return output or f"Successfully scheduled '{req.title}' at {req.start}."
 
             return await gate(
@@ -80,7 +80,7 @@ def get_calendar_agent() -> Agent:
             from tools.calendar import create_calendar_update as _update
 
             async def _execute() -> str:
-                output = await asyncio.to_thread(_update, req)
+                output = await asyncio.to_thread(_update, req, ctx.deps.workspace_creds)
                 return output or f"Event '{req.id}' updated."
 
             return await gate(
@@ -105,7 +105,7 @@ def get_calendar_agent() -> Agent:
             from tools.calendar import create_calendar_delete as _delete
 
             async def _execute() -> str:
-                output = await asyncio.to_thread(_delete, req)
+                output = await asyncio.to_thread(_delete, req, ctx.deps.workspace_creds)
                 return output or f"Event '{req.id}' deleted."
 
             return await gate(

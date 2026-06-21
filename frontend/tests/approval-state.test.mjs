@@ -17,7 +17,7 @@ const approvalRequest = {
   preview: {
     to: 'tom@example.com',
     subject: 'Not Feeling Well',
-    body: 'Hi Tom, I need to rest today.',
+    body: 'Hi Khoi, I need to rest today.',
     emailType: 'user_request',
   },
 };

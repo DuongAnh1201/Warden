@@ -13,9 +13,11 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from dotenv import load_dotenv
 import os
+
 load_dotenv()
 
-class Settings():
+
+class Settings:
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -52,13 +54,13 @@ class Settings():
     resend_api_key: str = os.getenv("RESEND_API_KEY", "")
     """Resend API key for sending emails."""
 
-    resend_from: str = os.getenv("RESEND_FROM", "Desir <onboarding@resend.dev>")
+    resend_from: str = os.getenv("RESEND_FROM", "Moneypenny <onboarding@resend.dev>")
     """Sender address. Use a verified domain in production."""
 
     logfire_token: str = os.getenv("LOGFIRE_TOKEN")
     logfire_environment: str = os.getenv("LOGFIRE_ENVIRONMENT")
     """Required for Logfire integration."""
-    
+
     file_path: str = os.getenv("FILE_PATH")
     """Path to the knowledge base."""
 
@@ -70,9 +72,31 @@ class Settings():
     transcription_model = os.getenv("TRANSCRIPTION_MODEL")
     voice_model = os.getenv("VOICE_MODEL")
 
-    consent_secret: str = os.getenv("CONSENT_SECRET", "moneypenny-dev-consent-secret-change-me")
+    consent_secret: str = os.getenv(
+        "CONSENT_SECRET", "moneypenny-dev-consent-secret-change-me"
+    )
     """Server-side secret used to mint Consent_Tokens (HMAC-SHA256).
     MUST be overridden in production; the default is for local/demo only."""
+
+    # ── Google Workspace (Drive / Gmail / Calendar) ──────────────────────────────
+    google_client_id: str = os.getenv("GOOGLE_CLIENT_ID", "")
+    google_client_secret: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+    """OAuth client credentials for the user's Workspace connect flow."""
+
+    google_redirect_uri: str = os.getenv(
+        "GOOGLE_REDIRECT_URI", "http://localhost:8765/oauth2callback"
+    )
+    """Redirect URI registered with the Google OAuth client."""
+
+    calendar_timezone: str = os.getenv("CALENDAR_TIMEZONE", "America/Los_Angeles")
+    """IANA time zone applied to naive datetimes sent to Google Calendar."""
+
+    workspace_token_path: str = os.getenv("WORKSPACE_TOKEN_PATH", ".workspace/credentials.enc")
+    """Where the encrypted Workspace refresh token is stored (gitignored)."""
+
+    workspace_token_key: str = os.getenv("WORKSPACE_TOKEN_KEY", "")
+    """Secret used to encrypt the stored token at rest. Falls back to consent_secret."""
+
 
 # Singleton — import this everywhere instead of instantiating Settings() yourself.
 settings = Settings()

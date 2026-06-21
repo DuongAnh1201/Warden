@@ -186,7 +186,7 @@ sequenceDiagram
 | **The agent network** | Fetch.ai (uAgents, Agentverse, ASI:One, Chat & Payment Protocols) | Lets MoneyPenny agents *find and talk to each other* — the heart of the cross-agent feature |
 | **Memory & knowledge** | Redis | Cross-session memory, semantic recall of what MoneyPenny knows about you, and the consent ledger |
 | **Trust & observability** | Arize Phoenix | Traces every action and proves none bypassed your consent |
-| **Real-world actions** | Resend (email), Google Drive, web search, macOS Calendar & Messages | The things MoneyPenny can actually *do* |
+| **Real-world actions** | Resend (email), Google Calendar, Google Drive, web search, macOS Messages | The things MoneyPenny can actually *do* |
 
 ---
 
@@ -202,7 +202,7 @@ The ring is the consent principle made physical: it **glows white** while listen
 
 ## Getting Started
 
-> ⚠️ Prototype — built during a hackathon. Calendar and messaging features use macOS-native APIs; a hosted demo mode simulates them so anyone can try the full flow from a browser.
+> ⚠️ Prototype — built during a hackathon. Calendar uses the Google Calendar API (via your Workspace connection); messaging features use macOS-native APIs. A hosted demo mode simulates them so anyone can try the full flow from a browser.
 
 ### Prerequisites
 

@@ -25,6 +25,20 @@ ActionType = Literal[
     "knowledge.create",
     "knowledge.update",
     "knowledge.add_context",
+    # Gmail triage (state-changing, gated). Reads/searches are not gated — they
+    # have no side effect. See docs/workspace-integration/.
+    "gmail.modify",
+    "gmail.draft",
+    "gmail.trash",
+    # Google Drive (state-changing, gated). list/read are not gated — no side effect.
+    "drive.upload",
+    "drive.update",
+    "drive.share",
+    "drive.delete",
+    # Workspace connection lifecycle (auditable in the ledger).
+    "workspace.connect",
+    "workspace.upgrade_scope",
+    "workspace.revoke",
 ]
 
 Decision = Literal["approve", "cancel", "revise"]

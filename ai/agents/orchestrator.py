@@ -71,6 +71,27 @@ def get_orchestrator() -> Agent:
             return result.output.message
 
         @_orchestrator.tool
+        async def delegate_gmail(ctx, request: str) -> str:
+            """Delegate an inbox request to the Gmail sub-agent.
+            Use for reading/searching the user's email and for triage (mark read,
+            archive, star, draft, trash). Does NOT send email — for sending, use
+            delegate_email. Pass the full user request as-is.
+            """
+            from ai.agents.agent6 import get_gmail_agent
+            result = await get_gmail_agent().run(request, deps=ctx.deps)
+            return result.output.message
+
+        @_orchestrator.tool
+        async def delegate_drive(ctx, request: str) -> str:
+            """Delegate a Google Drive request to the Drive sub-agent.
+            Use for searching/reading the user's files and for writes (create,
+            update, share, delete). Pass the full user request as-is.
+            """
+            from ai.agents.agent7 import get_drive_agent
+            result = await get_drive_agent().run(request, deps=ctx.deps)
+            return result.output.message
+
+        @_orchestrator.tool
         async def delegate_knowledge_base(ctx, request: str) -> str:
             """Delegate a knowledge base operation to the knowledge base sub-agent.
             Use for saving, retrieving, updating, or linking information.

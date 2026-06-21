@@ -1,38 +1,38 @@
 export type AgentUIState =
-  | 'idle'
-  | 'listening'
-  | 'processing'
-  | 'executing'
-  | 'waiting_approval'
-  | 'completed'
-  | 'error';
+  | "idle"
+  | "listening"
+  | "processing"
+  | "executing"
+  | "waiting_approval"
+  | "completed"
+  | "error";
 
 export type TimelineStepStatus =
-  | 'pending'
-  | 'active'
-  | 'completed'
-  | 'waiting_approval'
-  | 'blocked'
-  | 'error';
+  | "pending"
+  | "active"
+  | "completed"
+  | "waiting_approval"
+  | "blocked"
+  | "error";
 
-export type CapabilityStatus = 'connected' | 'active' | 'degraded' | 'offline';
-export type EmailDraftLifecycleStatus = 'pending' | 'approved' | 'rejected';
+export type CapabilityStatus = "connected" | "active" | "degraded" | "offline";
+export type EmailDraftLifecycleStatus = "pending" | "approved" | "rejected";
 
 export type VoiceAgentIconName =
-  | 'desir'
-  | 'mail'
-  | 'calendar'
-  | 'slack'
-  | 'settings'
-  | 'user'
-  | 'mic'
-  | 'brain'
-  | 'contact'
-  | 'lock'
-  | 'spark'
-  | 'check'
-  | 'x'
-  | 'waveform';
+  | "moneypenny"
+  | "mail"
+  | "calendar"
+  | "slack"
+  | "settings"
+  | "user"
+  | "mic"
+  | "brain"
+  | "contact"
+  | "lock"
+  | "spark"
+  | "check"
+  | "x"
+  | "waveform";
 
 export interface TimelineStep {
   id: string;
@@ -114,22 +114,22 @@ export interface VoiceAgentViewModel {
 }
 
 export type AgentEventPayload =
-  | { type: 'audio'; data: string }
-  | { type: 'state'; speaking: boolean }
-  | { type: 'transcript'; role: 'user' | 'assistant'; text: string }
-  | { type: 'tool_call'; callId: string; name: string; args: unknown }
-  | { type: 'error'; message: string }
+  | { type: "audio"; data: string }
+  | { type: "state"; speaking: boolean }
+  | { type: "transcript"; role: "user" | "assistant"; text: string }
+  | { type: "tool_call"; callId: string; name: string; args: unknown }
+  | { type: "error"; message: string }
   | {
-      type: 'step_update';
+      type: "step_update";
       stepId: string;
       status: TimelineStepStatus;
       title?: string;
       subtitle?: string;
     }
-  | { type: 'approval_requested'; request: ApprovalRequest }
+  | { type: "approval_requested"; request: ApprovalRequest }
   | {
-      type: 'approval_resolved';
+      type: "approval_resolved";
       requestId: string;
-      decision: 'approved' | 'cancelled';
+      decision: "approved" | "cancelled";
     }
-  | { type: 'completed'; message?: string };
+  | { type: "completed"; message?: string };

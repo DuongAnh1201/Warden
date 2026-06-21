@@ -239,6 +239,9 @@ logfire.config.json
 .env.*
 !.env.example
 
+# Workspace OAuth tokens (encrypted, but never commit)
+.workspace/
+
 # macOS
 .DS_Store
 .AppleDouble
