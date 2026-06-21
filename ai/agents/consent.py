@@ -21,7 +21,7 @@ runs the self-check bypass evaluator (see observability/).
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import TYPE_CHECKING
 
 from ai.agents.consent_token import mint_consent_token
@@ -73,11 +73,10 @@ async def gate(
         decision = await _decide(deps, req)
         recorder.voice_approval(decision)
 
-        approved_at = datetime.now(timezone.utc)
         if decision.decision == "approve" and not decision.consent_token:
             approval_basis = decision.revision_note or req.summary
             decision.consent_token = mint_consent_token(
-                req.action_id, approval_basis, approved_at.isoformat()
+                req.action_id, approval_basis, decision.decided_at.isoformat()
             )
 
         await ledger.record_decision(decision)
@@ -103,7 +102,7 @@ async def gate(
             action_id=req.action_id,
             action_type=action_type,
             token=decision.consent_token,
-            expires_at=approved_at + timedelta(seconds=CONSENT_TTL_SECONDS),
+            expires_at=decision.decided_at + timedelta(seconds=CONSENT_TTL_SECONDS),
         )
         try:
             with consent_scope(grant):
