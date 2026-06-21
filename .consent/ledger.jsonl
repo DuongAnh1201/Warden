@@ -14,3 +14,4 @@
 {"type": "outcome", "action_id": "d6b431c9a44c444d87f9e1a008bd7016", "outcome": "executed", "message": "ECHO from DemoAgent: hello from integration test", "resolved_at": "2026-06-21T12:42:09.311644+00:00"}
 {"type": "decision", "data": {"action_id": "c62f58b1488d4f29969a10195523cb1b", "decision": "approve", "revision_note": "", "consent_token": "b044ea95fe2850ee0f0b52802cba58812c634313f97f079784e5631f09f5136c", "decided_at": "2026-06-21T12:50:18.783858Z"}}
 {"type": "outcome", "action_id": "c62f58b1488d4f29969a10195523cb1b", "outcome": "executed", "message": "ECHO from DemoAgent: hello from integration test", "resolved_at": "2026-06-21T12:50:59.349373+00:00"}
+{"type": "decision", "data": {"action_id": "a7cafefcf80a4124becce66e750d7f79", "decision": "approve", "revision_note": "", "consent_token": "bf21ffb46c510dc8ba7ef213ced6b2197f366d36dd799052c2bd279a608c9a5b", "decided_at": "2026-06-21T12:57:48.602448Z"}}
