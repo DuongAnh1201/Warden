@@ -148,11 +148,7 @@ async def run_once(
 
     result = await get_orchestrator().run(prompt, deps=deps)
     print(result.output.response)
-<<<<<<< HEAD
     await _print_ledger_tail(deps.ledger)
-=======
-    await _print_ledger_tail(ledger)
->>>>>>> origin/main
 
 
 async def connect_workspace() -> None:
