@@ -1,0 +1,15 @@
+FROM python:3.13-slim
+
+WORKDIR /app
+
+RUN pip install uv --no-cache-dir
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
+
+COPY . .
+
+# Railway injects $PORT at runtime — server.py reads it via config.
+EXPOSE 8765
+
+CMD ["uv", "run", "python", "server.py"]
