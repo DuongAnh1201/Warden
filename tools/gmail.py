@@ -171,6 +171,36 @@ def modify_labels(
     return f"{summary} on message {message_id}."
 
 
+def send_message(
+    to: str,
+    subject: str,
+    body: str,
+    creds: Any = None,
+    html: str = "",
+    cc: list[str] | None = None,
+) -> str:
+    """Send an email from the user's Gmail account. Returns 'ok' or an error string."""
+    require_consent("email.send")
+    if _demo(creds):
+        return f"[DEMO] Email to {to} — subject '{subject}' (not sent)."
+    try:
+        mime = EmailMessage()
+        mime["To"] = to
+        mime["Subject"] = subject
+        if cc:
+            mime["Cc"] = ", ".join(cc)
+        mime.set_content(body)
+        if html:
+            mime.add_alternative(html, subtype="html")
+        raw = base64.urlsafe_b64encode(mime.as_bytes()).decode("utf-8")
+        _service(creds).users().messages().send(
+            userId="me", body={"raw": raw}
+        ).execute()
+        return "ok"
+    except Exception as e:  # noqa: BLE001
+        return f"gmail error: {e}"
+
+
 def create_draft(to: str, subject: str, body: str, creds: Any = None) -> str:
     """Create a draft reply/message. A draft is NOT sent — it stays in the mailbox."""
     require_consent("gmail.draft")

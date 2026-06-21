@@ -29,7 +29,7 @@ def get_gmail_agent() -> Agent:
             system_prompt=load_prompt("gmail_agent"),
             output_type=GmailResult,
             deps_type=OrchestratorDeps,
-            instrument=get_agent_instrumentation(),
+            capabilities=get_agent_instrumentation(),
         )
 
         # ── Reads (no side effect, not gated) ────────────────────────────────────

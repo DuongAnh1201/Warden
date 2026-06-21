@@ -14,6 +14,8 @@ consent evaluator still runs.
 from __future__ import annotations
 
 import logging
+import socket
+from urllib.parse import urlparse
 
 from observability.phoenix_config import (
     describe_phoenix_target,
@@ -24,6 +26,18 @@ from observability.phoenix_config import (
 logger = logging.getLogger(__name__)
 
 _initialized = False
+
+
+def _endpoint_reachable(url: str, timeout: float = 1.5) -> bool:
+    """Return True if a TCP connection to the OTLP endpoint succeeds within *timeout* seconds."""
+    try:
+        parsed = urlparse(url)
+        host = parsed.hostname or "127.0.0.1"
+        port = parsed.port or 4318
+        with socket.create_connection((host, port), timeout=timeout):
+            return True
+    except OSError:
+        return False
 
 
 def setup_observability() -> bool:
@@ -65,19 +79,31 @@ def setup_observability() -> bool:
         target = describe_phoenix_target(endpoint, settings.phoenix_api_key)
 
         try:
-            exporter = OTLPSpanExporter(endpoint=endpoint, headers=headers)
-            provider.add_span_processor(BatchSpanProcessor(exporter))
-            logger.info(
-                "Phoenix OTLP export → %s (%s, project=%s)",
-                endpoint,
-                target,
-                settings.phoenix_project_name,
-            )
-            if target.startswith("Phoenix Cloud") and "missing" in target:
-                logger.warning(
-                    "Cloud endpoint configured without PHOENIX_API_KEY — "
-                    "trace export will likely fail. See docs/observability/phoenix.md"
+            if not _endpoint_reachable(endpoint):
+                logger.info(
+                    "Phoenix collector not reachable at %s — tracing disabled. "
+                    "Run `uv run phoenix serve` to enable it.",
+                    endpoint,
                 )
+            else:
+                # Quiet down the OTLP background-thread noise so connection hiccups
+                # don't spam the terminal after startup.
+                logging.getLogger("opentelemetry.sdk.trace.export").setLevel(logging.CRITICAL)
+                logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+
+                exporter = OTLPSpanExporter(endpoint=endpoint, headers=headers)
+                provider.add_span_processor(BatchSpanProcessor(exporter))
+                logger.info(
+                    "Phoenix OTLP export → %s (%s, project=%s)",
+                    endpoint,
+                    target,
+                    settings.phoenix_project_name,
+                )
+                if target.startswith("Phoenix Cloud") and "missing" in target:
+                    logger.warning(
+                        "Cloud endpoint configured without PHOENIX_API_KEY — "
+                        "trace export will likely fail. See docs/observability/phoenix.md"
+                    )
         except Exception as exc:  # noqa: BLE001
             logger.warning("Phoenix OTLP exporter not configured (%s) — in-process eval only", exc)
 
@@ -96,15 +122,16 @@ def _instrument_pydantic_ai() -> None:
     pass
 
 
-def get_agent_instrumentation():
-    """Return InstrumentationSettings for Agent(...) when Phoenix is enabled."""
+def get_agent_instrumentation() -> list:
+    """Return a capabilities list for Agent(capabilities=...) when Phoenix is enabled."""
     try:
         from config import settings
 
         if not settings.phoenix_enabled:
-            return None
+            return []
+        from pydantic_ai.capabilities import Instrumentation
         from pydantic_ai.models.instrumented import InstrumentationSettings
 
-        return InstrumentationSettings(version=2)
+        return [Instrumentation(InstrumentationSettings(version=2))]
     except Exception:  # noqa: BLE001
-        return None
+        return []

@@ -8,6 +8,11 @@ from schemas.agent4 import CommunicationRequest, CommunicationResult
 
 _communication_agent: Agent | None = None
 
+_DEFAULT_CONTACTS: list[dict] = [
+    {"name": "Tom Nguyen", "phone": "9253197021"},
+    {"name": "Khoi Duong", "phone": "9258608099"},
+]
+
 
 def get_communication_agent() -> Agent:
     global _communication_agent
@@ -21,14 +26,23 @@ def get_communication_agent() -> Agent:
             system_prompt=load_prompt("communication_agent"),
             output_type=CommunicationResult,
             deps_type=OrchestratorDeps,
-            instrument=get_agent_instrumentation(),
+            capabilities=get_agent_instrumentation(),
         )
 
         @_communication_agent.tool
         async def search_contact(ctx: RunContext[OrchestratorDeps], name: str) -> list[dict]:
             """Search macOS Contacts by name and return matching entries with phone numbers."""
             from tools.communication import search_contact as _search
-            results = _search(name)
+            results: list[dict] = list(_search(name))
+
+            # Merge built-in default contacts if not already present.
+            q = name.lower().strip()
+            existing_names = {r.get("name", "").lower() for r in results}
+            for contact in _DEFAULT_CONTACTS:
+                cn = contact["name"].lower()
+                if (q in cn or cn in q) and cn not in existing_names:
+                    results.append(contact)
+
             if not results:
                 return [{"name": name, "phone": "No contacts found."}]
             return results

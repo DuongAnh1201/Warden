@@ -26,6 +26,7 @@ async def build_orchestrator_deps(
         Callable[[ActionRequest], Awaitable[ActionDecision]] | None
     ) = None,
     ledger: ConsentLedger | None = None,
+    history: list[dict[str, str]] | None = None,
 ) -> OrchestratorDeps:
     """Assemble deps shared by run_text.py and the WebSocket server."""
     from config import settings
@@ -61,9 +62,10 @@ async def build_orchestrator_deps(
 
     return OrchestratorDeps(
         user_id=resolved_user_id,
-        name=persona.get("name", "Khoi"),
+        name=persona.get("name", ""),
         preferred_pronouns=persona.get("preferred_pronouns", "Sir"),
-        email_address=persona.get("email_address", "khoiduong2913@gmail.com"),
+        email_address=persona.get("email_address", ""),
+        history_context={"turns": history if history is not None else []},
         knowledge=knowledge,
         execution_log=execution_log,
         ledger=ledger or get_ledger(),

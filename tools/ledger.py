@@ -121,37 +121,71 @@ class RedisLedger:
     def __init__(self, url: str) -> None:
         import redis.asyncio as aioredis  # lazy import
 
-        self._redis = aioredis.from_url(url, decode_responses=True)
+        self._redis = aioredis.from_url(
+            url,
+            decode_responses=True,
+            socket_connect_timeout=5,
+            socket_timeout=5,
+            retry_on_timeout=False,
+        )
+        # In-process fallback used when Redis is unreachable.
+        self._fallback = FileLedger()
+        # action_ids whose first write went to the fallback — all subsequent
+        # ops for the same id stay there to prevent split-brain inconsistency.
+        self._fallback_ids: set[str] = set()
+
+    async def _xadd(self, fields: dict) -> None:
+        try:
+            await self._redis.xadd(self.STREAM, fields)
+        except Exception as exc:  # noqa: BLE001
+            import logging
+            logging.getLogger(__name__).warning(
+                "ledger: Redis unavailable (%s) — using file fallback", exc
+            )
+            raise
 
     async def record_request(self, req: ActionRequest) -> None:
-        await self._redis.xadd(
-            self.STREAM,
-            {"type": "request", "data": req.model_dump_json()},
-        )
+        try:
+            await self._xadd({"type": "request", "data": req.model_dump_json()})
+        except Exception:
+            self._fallback_ids.add(req.action_id)
+            await self._fallback.record_request(req)
 
     async def record_decision(self, d: ActionDecision) -> None:
-        await self._redis.xadd(
-            self.STREAM,
-            {"type": "decision", "data": d.model_dump_json()},
-        )
+        if d.action_id in self._fallback_ids:
+            await self._fallback.record_decision(d)
+            return
+        try:
+            await self._xadd({"type": "decision", "data": d.model_dump_json()})
+        except Exception:
+            self._fallback_ids.add(d.action_id)
+            await self._fallback.record_decision(d)
 
     async def record_outcome(
         self, action_id: str, outcome: Outcome, message: str
     ) -> None:
-        await self._redis.xadd(
-            self.STREAM,
-            {
-                "type": "outcome",
-                "action_id": action_id,
-                "outcome": outcome,
-                "message": message,
-                "resolved_at": datetime.now(timezone.utc).isoformat(),
-            },
-        )
+        if action_id in self._fallback_ids:
+            await self._fallback.record_outcome(action_id, outcome, message)
+            return
+        try:
+            await self._xadd(
+                {
+                    "type": "outcome",
+                    "action_id": action_id,
+                    "outcome": outcome,
+                    "message": message,
+                    "resolved_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+        except Exception:
+            self._fallback_ids.add(action_id)
+            await self._fallback.record_outcome(action_id, outcome, message)
 
     async def history(self, limit: int = 50) -> list[LedgerEntry]:
-        # Read the last `limit` entries from the stream and reconstruct entries.
-        raw = await self._redis.xrevrange(self.STREAM, count=limit * 3)
+        try:
+            raw = await self._redis.xrevrange(self.STREAM, count=limit * 3)
+        except Exception:
+            return await self._fallback.history(limit)
         index: dict[str, LedgerEntry] = {}
         for _msg_id, fields in reversed(raw):
             t = fields.get("type")
@@ -169,13 +203,22 @@ class RedisLedger:
                     e.outcome = fields["outcome"]  # type: ignore[assignment]
                     e.result_message = fields["message"]
                     e.resolved_at = datetime.fromisoformat(fields["resolved_at"])
+        # Merge any entries written to the file fallback during a Redis outage.
+        fallback_entries = await self._fallback.history(limit)
+        for fe in fallback_entries:
+            index.setdefault(fe.request.action_id, fe)
         entries = list(index.values())
         entries.sort(key=lambda e: e.request.created_at)
         return entries[-limit:]
 
     async def lookup(self, action_id: str) -> LedgerEntry | None:
         """Find one ledger row by scanning recent stream entries."""
-        raw = await self._redis.xrevrange(self.STREAM, count=500)
+        if action_id in self._fallback_ids:
+            return await self._fallback.lookup(action_id)
+        try:
+            raw = await self._redis.xrevrange(self.STREAM, count=500)
+        except Exception:
+            return await self._fallback.lookup(action_id)
         entry: LedgerEntry | None = None
         for _msg_id, fields in reversed(raw):
             t = fields.get("type")
@@ -193,6 +236,10 @@ class RedisLedger:
                     entry.result_message = fields["message"]
                     entry.resolved_at = datetime.fromisoformat(fields["resolved_at"])
                     return entry
+        # Redis succeeded but the record is missing — it may have been written to the
+        # file fallback during a prior Redis outage. Check there before returning None.
+        if entry is None:
+            entry = await self._fallback.lookup(action_id)
         return entry
 
 

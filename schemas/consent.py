@@ -39,6 +39,10 @@ ActionType = Literal[
     "workspace.connect",
     "workspace.upgrade_scope",
     "workspace.revoke",
+    # Contact management
+    "contact.register",
+    # Agentverse agent messaging
+    "agent.message",
 ]
 
 Decision = Literal["approve", "cancel", "revise"]

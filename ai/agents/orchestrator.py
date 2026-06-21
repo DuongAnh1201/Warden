@@ -19,7 +19,7 @@ def get_orchestrator() -> Agent:
             system_prompt=load_prompt("orchestrator"),
             output_type=OrchestratorResult,
             deps_type=OrchestratorDeps,
-            instrument=get_agent_instrumentation(),
+            capabilities=get_agent_instrumentation(),
         )
 
         # ── Dynamic context: inject user identity + bio at runtime ───────────────
@@ -33,6 +33,13 @@ def get_orchestrator() -> Agent:
                 parts.append(f"User's email: {ctx.deps.email_address}.")
             if ctx.deps.user_history_context:
                 parts.append(f"## Soul\n{ctx.deps.user_history_context}")
+                parts.append(f"## User Background\n{ctx.deps.user_history_context}")
+            turns = (ctx.deps.history_context or {}).get("turns", [])
+            if turns:
+                history_lines = "\n".join(
+                    f"User: {t['user']}\nAssistant: {t['assistant']}" for t in turns[-10:]
+                )
+                parts.append(f"## Conversation so far\n{history_lines}")
             return "\n".join(parts)
 
         # ── Sub-agent delegation tools ─────────────────────────────────────────
@@ -54,27 +61,6 @@ def get_orchestrator() -> Agent:
             if link:
                 prompt += f"\nLink: {link}"
             result = await get_email_agent().run(prompt, deps=ctx.deps)
-            return result.output.message
-
-        @_orchestrator.tool
-        async def delegate_calendar(
-            ctx: RunContext[OrchestratorDeps],
-            request: str,
-        ) -> str:
-            """Delegate any calendar request to the calendar sub-agent.
-            Pass the full user request as-is, including event IDs from ctx.deps.calendar_event_ids when available.
-            Known event IDs are injected automatically.
-            """
-            from datetime import datetime
-            from ai.agents.agent2 import get_calendar_agent
-            known_ids = ctx.deps.calendar_event_ids
-            now = datetime.now().strftime("%Y-%m-%d %H:%M (%A)")
-            prompt = f"[Current date and time: {now}]\n\n{request}"
-            if known_ids:
-                prompt += f"\n\nKnown event IDs: {known_ids}"
-            result = await get_calendar_agent().run(prompt, deps=ctx.deps)
-            if result.output.event_id and result.output.title:
-                ctx.deps.calendar_event_ids[result.output.title] = result.output.event_id
             return result.output.message
 
         @_orchestrator.tool
@@ -137,5 +123,18 @@ def get_orchestrator() -> Agent:
             from ai.agents.agent5 import get_knowledge_base_agent
             result = await get_knowledge_base_agent().run(request, deps=ctx.deps)
             return result.output.message
+
+        @_orchestrator.tool
+        async def delegate_agentverse(
+            ctx: RunContext[OrchestratorDeps],
+            request: str,
+        ) -> str:
+            """Discover or message another AI agent on the Fetch.ai Agentverse network.
+            Use when the user wants to contact, query, or delegate a task to an external agent.
+            Pass the full user request as-is.
+            """
+            from ai.agents.agent8 import get_agentverse_agent
+            result = await get_agentverse_agent().run(request, deps=ctx.deps)
+            return result.output if isinstance(result.output, str) else str(result.output)
 
     return _orchestrator

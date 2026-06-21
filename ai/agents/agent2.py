@@ -22,7 +22,7 @@ def get_calendar_agent() -> Agent:
             name="calendar_agent",
             system_prompt=load_prompt("calendar_agent"),
             output_type=CalendarResult,
-            instrument=get_agent_instrumentation(),
+            capabilities=get_agent_instrumentation(),
         )
 
         @_calendar_agent.tool

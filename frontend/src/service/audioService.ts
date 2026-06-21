@@ -33,7 +33,7 @@ function downsample(buffer: Float32Array, fromRate: number): Float32Array {
 export class AudioRecorder {
   private ctx: AudioContext | null = null;
   private source: MediaStreamAudioSourceNode | null = null;
-  private processor: ScriptProcessorNode | null = null;
+  private workletNode: AudioWorkletNode | null = null;
   private stream: MediaStream | null = null;
 
   constructor(private onChunk: (base64: string) => void) {}
@@ -43,29 +43,34 @@ export class AudioRecorder {
       audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
     });
 
-    // Use the hardware's native rate — we'll manually downsample to 16kHz
     this.ctx = new AudioContext();
     const nativeRate = this.ctx.sampleRate;
 
-    this.source = this.ctx.createMediaStreamSource(this.stream);
-    this.processor = this.ctx.createScriptProcessor(4096, 1, 1);
+    await this.ctx.audioWorklet.addModule('/audio-processor.js');
 
-    this.processor.onaudioprocess = (e) => {
-      const floatData = e.inputBuffer.getChannelData(0);
-      const resampled = downsample(floatData, nativeRate);
+    this.source = this.ctx.createMediaStreamSource(this.stream);
+    this.workletNode = new AudioWorkletNode(this.ctx, 'audio-capture-processor');
+
+    this.workletNode.port.onmessage = (e: MessageEvent<Float32Array>) => {
+      const resampled = downsample(e.data, nativeRate);
       const pcm = floatTo16BitPCM(resampled);
       const bytes = new Uint8Array(pcm.buffer);
+      // P6: spread into String.fromCharCode avoids per-element string concat
+      const CHUNK = 2048;
       let binary = '';
-      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+      for (let i = 0; i < bytes.length; i += CHUNK) {
+        binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+      }
       this.onChunk(btoa(binary));
     };
 
-    this.source.connect(this.processor);
-    this.processor.connect(this.ctx.destination);
+    this.source.connect(this.workletNode);
+    // AudioWorkletNode must be connected to destination to keep the graph alive
+    this.workletNode.connect(this.ctx.destination);
   }
 
   stop(): void {
-    this.processor?.disconnect();
+    this.workletNode?.disconnect();
     this.source?.disconnect();
     this.stream?.getTracks().forEach((t) => t.stop());
     this.ctx?.close();

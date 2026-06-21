@@ -34,7 +34,7 @@ def get_knowledge_base_agent() -> Agent:
             system_prompt=load_prompt("knowledge_base_agent"),
             output_type=KnowledgeBaseResult,
             deps_type=OrchestratorDeps,
-            instrument=get_agent_instrumentation(),
+            capabilities=get_agent_instrumentation(),
         )
 
         # ── Save (create / overwrite) ──────────────────────────────────────────

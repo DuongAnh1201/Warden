@@ -28,7 +28,7 @@ def get_drive_agent() -> Agent:
             system_prompt=load_prompt("drive_agent"),
             output_type=DriveResult,
             deps_type=OrchestratorDeps,
-            instrument=get_agent_instrumentation(),
+            capabilities=get_agent_instrumentation(),
         )
 
         # ── Reads (no side effect, not gated) ────────────────────────────────────
