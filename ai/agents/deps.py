@@ -11,6 +11,10 @@ _TOM_HISTORY = load_prompt("tombio")
 
 @dataclass
 class OrchestratorDeps:
+    # ── User identity ──────────────────────────────────────────────────────────
+    user_id: str = field(default="default")
+    """Unique identifier for the current user. Used to namespace all Redis data."""
+
     history_context: dict = field(default_factory=dict)
     preferred_pronouns: str = field(default="Sir")
     name: str = field(default="Tom")
@@ -18,6 +22,15 @@ class OrchestratorDeps:
     tom_history_context: str = field(default=_TOM_HISTORY)
     search_api_key: str = field(default="")
     calendar_event_ids: dict = field(default_factory=dict)
+
+    # ── Graph knowledge + execution log (Phase 4) ──────────────────────────────
+    knowledge: object | None = field(default=None)
+    """GraphKnowledge instance. None falls back to file-backed knowledge base.
+    Save only on explicit user request; retrieval uses semantic + graph traversal."""
+
+    execution_log: object | None = field(default=None)
+    """ExecutionLog instance. When set, every tool call logs its outcome to Redis.
+    Always-on: logs both successes and failures."""
 
     # ── Consent gate ───────────────────────────────────────────────────────────
     request_approval: Callable[[ActionRequest], Awaitable[ActionDecision]] | None = field(

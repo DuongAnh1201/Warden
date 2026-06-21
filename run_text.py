@@ -13,6 +13,10 @@ Usage:
     uv run python run_text.py --yes "Email Priya that the deck is ready"
         Same, but auto-approves all gated actions (still writes to the ledger).
         Useful for CI / non-interactive smoke runs.
+
+    uv run python run_text.py --user alice "What did I tell you about the project?"
+        Run as a specific user. History and knowledge are loaded from Redis
+        under that user's namespace (requires REDIS_URL in .env).
 """
 from __future__ import annotations
 
@@ -115,13 +119,37 @@ async def _print_ledger_tail(ledger, limit: int = 5) -> None:
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
-async def run_once(prompt: str, auto_approve: bool = False) -> None:
+async def run_once(
+    prompt: str,
+    auto_approve: bool = False,
+    user_id: str = "default",
+) -> None:
+    from config import settings
     from ai.agents.orchestrator import get_orchestrator
     from ai.agents.deps import OrchestratorDeps
     from tools.ledger import get_ledger
 
+    # ── Phase 4: graph knowledge + execution log (when REDIS_URL is set) ────────
+    knowledge = None
+    execution_log = None
+    if settings.redis_url:
+        try:
+            from memory.execution_log import get_execution_log
+            execution_log = get_execution_log()
+        except Exception as exc:
+            print(f"[execution_log] skipped — {exc}", flush=True)
+        if settings.openai_api_key:
+            try:
+                from memory.graph import get_graph_knowledge
+                knowledge = get_graph_knowledge()
+            except Exception as exc:
+                print(f"[graph_knowledge] skipped — {exc}", flush=True)
+
     ledger = get_ledger()
     deps = OrchestratorDeps(
+        user_id=user_id,
+        knowledge=knowledge,
+        execution_log=execution_log,
         ledger=ledger,
         auto_approve=auto_approve,
         request_approval=None if auto_approve else _console_approver,
@@ -140,15 +168,23 @@ def main() -> None:
         return
 
     auto_approve = False
-    if args[0] == "--yes":
-        auto_approve = True
-        args = args[1:]
+    user_id = "default"
+
+    while args:
+        if args[0] == "--yes":
+            auto_approve = True
+            args = args[1:]
+        elif args[0] == "--user" and len(args) > 1:
+            user_id = args[1]
+            args = args[2:]
+        else:
+            break
 
     if not args:
-        print("Usage: run_text.py [--yes] <prompt>")
+        print("Usage: run_text.py [--yes] [--user <id>] <prompt>")
         sys.exit(1)
 
-    asyncio.run(run_once(" ".join(args), auto_approve=auto_approve))
+    asyncio.run(run_once(" ".join(args), auto_approve=auto_approve, user_id=user_id))
 
 
 if __name__ == "__main__":
