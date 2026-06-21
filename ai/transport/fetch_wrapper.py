@@ -145,6 +145,12 @@ async def handle_chat_message(ctx: Context, sender: str, msg: ChatMessage) -> No
     logger.info("[fetch/chat] → %s (%s): %s", sender[:20], intent, response_text[:80])
 
 
+@chat_protocol.on_message(model=ChatAcknowledgement)
+async def handle_chat_ack(ctx: Context, sender: str, msg: ChatAcknowledgement) -> None:
+    """ACK from the AI Engine confirming it received our reply — nothing to do."""
+    logger.debug("[fetch/chat] ack from %s for msg %s", sender[:20], msg.acknowledged_msg_id)
+
+
 # ── Protocol 2: DesirProtocol (direct agent-to-agent) ─────────────────────────
 # Custom protocol for agents that want intent metadata in the response.
 
@@ -177,17 +183,28 @@ def _build_agent() -> Agent:
             "Add a stable seed phrase to .env so MoneyPenny has a fixed Fetch.ai address."
         )
 
-    public_url = (
-        settings.fetch_agent_endpoint.rstrip("/")
-        or f"http://localhost:{settings.fetch_agent_port}"
-    )
-    agent = Agent(
-        name="moneypenny",
-        seed=settings.fetch_agent_seed,
-        port=settings.fetch_agent_port,
-        endpoint=[f"{public_url}/submit"],
-        mailbox=bool(settings.agentverse_api_key),
-    )
+    use_mailbox = bool(settings.agentverse_api_key)
+
+    if use_mailbox:
+        # Mailbox mode: agent connects outbound to Agentverse — no public endpoint needed.
+        agent = Agent(
+            name="moneypenny",
+            seed=settings.fetch_agent_seed,
+            port=settings.fetch_agent_port,
+            mailbox=True,
+        )
+    else:
+        # Endpoint mode: Agentverse POSTs directly to our public URL.
+        public_url = (
+            settings.fetch_agent_endpoint.rstrip("/")
+            or f"http://localhost:{settings.fetch_agent_port}"
+        )
+        agent = Agent(
+            name="moneypenny",
+            seed=settings.fetch_agent_seed,
+            port=settings.fetch_agent_port,
+            endpoint=[f"{public_url}/submit"],
+        )
 
     @agent.on_event("startup")
     async def on_startup(ctx: Context) -> None:
