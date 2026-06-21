@@ -65,6 +65,10 @@ class Settings():
     redis_url: str = os.getenv("REDIS_URL", "")
     """Optional Redis connection URL (e.g. redis://localhost:6379).
     When set, the consent ledger uses Redis Streams; otherwise FileLedger (JSONL)."""
+    deepgram_api_key = os.getenv("DEEPGRAM_API_KEY")
+    voice_provider = os.getenv("VOICE_PROVIDER")
+    transcription_model = os.getenv("TRANSCRIPTION_MODEL")
+    voice_model = os.getenv("VOICE_MODEL")
 
     consent_secret: str = os.getenv("CONSENT_SECRET", "moneypenny-dev-consent-secret-change-me")
     """Server-side secret used to mint Consent_Tokens (HMAC-SHA256).
